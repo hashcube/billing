@@ -1,4 +1,5 @@
 #import "BillingPlugin.h"
+#import "Base64.h"
 
 // TODO: Verify store receipt for security
 
@@ -139,6 +140,24 @@
 		switch (transaction.transactionState) {
 			case SKPaymentTransactionStatePurchased:
 				NSLog(@"{billing} Transaction completed purchase for sku=%@ and token=%@", sku, token);
+				//The following receipt validation is done according to the following article
+				//https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/StoreKitGuide/VerifyingStoreReceipts/VerifyingStoreReceipts.html
+				//
+				NSString *receiptString;
+				if ([NSBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
+					//For iOS 7 and up
+				   	NSURL *receiptURL = [NSBundle appStoreReceiptURL];
+				   	NSData *receiptFile = [[NSData alloc] initWithContentsOfURL:receiptURL];
+				   	NSString *plainString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
+				   	receiptString = [plainString base64EncodedString];
+				}
+				else
+				{
+					//use for ios 6 and below
+					NSData *receiptFile = transaction.transactionReceipt;
+					receiptString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
+				}
+				NSLog(@"=====================\n===================\n%@", receiptString);
 				[self completeTransaction:transaction];
 				break;
 			case SKPaymentTransactionStateRestored:
