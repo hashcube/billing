@@ -1,7 +1,9 @@
 {
 	"code": [
 		"BillingPlugin.h",
-		"BillingPlugin.mm"
+		"BillingPlugin.mm",
+		"Base64.h",
+		"Base64.m"
 	],
 	"frameworks": [
 		"StoreKit"

@@ -29,7 +29,8 @@
 	return self;
 }
 
-- (void) completeTransaction:(SKPaymentTransaction *)transaction {
+- (void) completeTransaction:(SKPaymentTransaction *)transaction
+               receiptString:(NSString *)receiptString{
 	NSString *sku = transaction.payment.productIdentifier;
 	NSString *token = transaction.transactionIdentifier;
 
@@ -49,6 +50,7 @@
 										  @"billingPurchase",@"name",
 										  sku, @"sku",
 										  token, @"token",
+                                          receiptString, @"receiptString",
 										  [NSNull null], @"failure",
 										  nil]];
 }
@@ -158,7 +160,7 @@
 					receiptString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
 				}
 				NSLog(@"=====================\n===================\n%@", receiptString);
-				[self completeTransaction:transaction];
+				[self completeTransaction:transaction receiptString:receiptString];
 				break;
 			case SKPaymentTransactionStateRestored:
 				NSLog(@"{billing} Ignoring restored transaction for sku=%@ and token=%@", sku, token);
@@ -242,9 +244,11 @@
 
 - (void) consume:(NSDictionary *)jsonObject {
 	NSString *token = nil;
+	NSString *receiptString = nil;
 
 	@try {
 		token = [jsonObject valueForKey:@"token"];
+		receiptString = [jsonObject valueForKey:@"receiptString"];
 
 		SKPaymentTransaction *transaction = [self.purchases valueForKey:token];
 		if (!transaction) {
@@ -253,6 +257,7 @@
 			[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 												  @"billingConsume",@"name",
 												  token,@"token",
+												  receiptString,@"receiptString",
 												  @"already consumed",@"failure",
 												  nil]];
 		} else {
@@ -267,6 +272,7 @@
 			[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 												  @"billingConsume",@"name",
 												  token,@"token",
+												  receiptString,@"receiptString",
 												  [NSNull null],@"failure",
 												  nil]];
 		}
@@ -277,6 +283,7 @@
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 											  @"billingConsume",@"name",
 											  token ? token : [NSNull null],@"token",
+											  receiptString ? receiptString : [NSNull null],@"receiptString",
 											  @"failed",@"failure",
 											  nil]];
 	}
