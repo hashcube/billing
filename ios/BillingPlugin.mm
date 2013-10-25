@@ -283,7 +283,7 @@
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 											  @"billingConsume",@"name",
 											  token ? token : [NSNull null],@"token",
-											  receiptString ? receiptString : [NSNull null],@"receiptString",
+											  receiptString ? receiptString : "noReceiptSent",@"receiptString",
 											  @"failed",@"failure",
 											  nil]];
 	}
