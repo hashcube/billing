@@ -1,5 +1,5 @@
 #import "BillingPlugin.h"
-#import "Base64.h"
+#import "NSString+Base64.h"
 
 // TODO: Verify store receipt for security
 
@@ -283,7 +283,7 @@
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 											  @"billingConsume",@"name",
 											  token ? token : [NSNull null],@"token",
-											  receiptString ? receiptString : "noReceiptSent",@"receiptString",
+											  receiptString ? receiptString : @"noReceiptSent",@"receiptString",
 											  @"failed",@"failure",
 											  nil]];
 	}
