@@ -372,8 +372,8 @@ public class BillingPlugin implements IPlugin {
 
 								logger.log("{billing} Successfully purchased SKU:", sku);
 								JSONObject receiptStringCombo = new JSONObject();
-								receiptStringCombo.append("purchase_data", data.getStringExtra("INAPP_PURCHASE_DATA"));
-								receiptStringCombo.append("signature", data.getStringExtra("INAPP_DATA_SIGNATURE"))
+								receiptStringCombo.append("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
+								receiptStringCombo.append("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"))
 								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 								break;
 							case Activity.RESULT_CANCELED:
