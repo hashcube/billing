@@ -44,13 +44,14 @@ public class BillingPlugin implements IPlugin {
 	static private final int BUY_REQUEST_CODE = 123450;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
-		String sku, token, failure;
+		String sku, token, failure, receiptString;
 
-		public PurchaseEvent(String sku, String token, String failure) {
+		public PurchaseEvent(String sku, String token, String failure, String receiptString) {
 			super("billingPurchase");
 			this.sku = sku;
 			this.token = token;
 			this.failure = failure;
+			this.receiptString = receiptString;
 		}
 	}
 
@@ -165,7 +166,7 @@ public class BillingPlugin implements IPlugin {
 
 			synchronized (mServiceLock) {
 				if (mService == null) {
-					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service"));
+					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service", null));
 					return;
 				}
 
@@ -196,7 +197,7 @@ public class BillingPlugin implements IPlugin {
 		}
 
 		if (!success && sku != null) {
-			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
+			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed", null));
 		}
 	}
 
@@ -357,7 +358,7 @@ public class BillingPlugin implements IPlugin {
 
 				if (purchaseData == null) {
 					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
 				} else {
 					JSONObject jo = new JSONObject(purchaseData);
 					sku = jo.getString("productId");
@@ -370,22 +371,25 @@ public class BillingPlugin implements IPlugin {
 								String token = jo.getString("purchaseToken");
 
 								logger.log("{billing} Successfully purchased SKU:", sku);
-								EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
+								JSONObject receiptStringCombo = new JSONObject();
+								receiptStringCombo.append("purchase_data", data.getStringExtra("INAPP_PURCHASE_DATA"));
+								receiptStringCombo.append("signature", data.getStringExtra("INAPP_DATA_SIGNATURE"))
+								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 								break;
 							case Activity.RESULT_CANCELED:
 								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 								break;
 							default:
 								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 						}
 					}
 				}
 			} catch (JSONException e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
 				e.printStackTrace();
-				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed"));
+				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 			}
 		}
 	}
