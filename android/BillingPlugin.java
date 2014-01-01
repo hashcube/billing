@@ -9,7 +9,6 @@ import android.support.v4.app.FragmentActivity;
 import com.tealeaf.EventQueue;
 import com.tealeaf.TeaLeaf;
 import com.tealeaf.logger;
-import com.tealeaf.event.PluginEvent;
 import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
@@ -38,7 +37,6 @@ import android.os.Build;
 import com.tealeaf.EventQueue;
 import com.tealeaf.event.*;
 
-import com.android.vending.billing.IInAppBillingService;
 
 import com.amazon.inapp.purchasing.BasePurchasingObserver;
 import com.amazon.inapp.purchasing.PurchasingManager;
@@ -49,12 +47,12 @@ import com.amazon.inapp.purchasing.Receipt;
 public class BillingPlugin implements IPlugin {
 	Context _ctx = null;
 	Activity _activity = null;
-	IInAppBillingService mService = null;
+        String mService = null;
 	ServiceConnection mServiceConn = null;
 	public enum DeviceType {
     	KINDLE, ANDROID
 	}
-	private DeviceType deviceIs = DeviceType.ANDROID;
+	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
 	
@@ -173,7 +171,7 @@ public class BillingPlugin implements IPlugin {
 				public void onServiceConnected(ComponentName name, 
 						IBinder service) {
 					synchronized (mServiceLock) {
-						mService = IInAppBillingService.Stub.asInterface(service);
+						mService = null;
 					}
 
 					EventQueue.pushEvent(new ConnectedEvent(true));
@@ -186,9 +184,11 @@ public class BillingPlugin implements IPlugin {
 
 		_activity = activity;
 
+		/*
 		_ctx.bindService(new 
 				Intent("com.android.vending.billing.InAppBillingService.BIND"),
 				mServiceConn, Context.BIND_AUTO_CREATE);
+				*/
 	}
 
 	public void onResume() {
@@ -197,6 +197,7 @@ public class BillingPlugin implements IPlugin {
 	public void onStart() {
 		final PackageManager packageManager = _ctx.getPackageManager();
 
+    /*
 		try {
 		    final ApplicationInfo applicationInfo = packageManager.getApplicationInfo(_ctx.getPackageName(), 0);
 		    if ("com.amazon.venezia".equals(packageManager.getInstallerPackageName(applicationInfo.packageName))) {
@@ -216,6 +217,7 @@ public class BillingPlugin implements IPlugin {
 		} catch (Exception e) {
 		    e.printStackTrace();
 		}		
+    */
 		switch(deviceIs)
 		{
 			case KINDLE:
@@ -308,8 +310,8 @@ public class BillingPlugin implements IPlugin {
 
 				// TODO: Add additional security with extra field ("1")
 
-				buyIntentBundle = mService.getBuyIntent(3, _ctx.getPackageName(),
-						sku, "inapp", "1");
+				//buyIntentBundle = mService.getBuyIntent(3, _ctx.getPackageName(),
+				//		sku, "inapp", "1");
 			}
 
 			// If unable to create bundle,
@@ -375,7 +377,7 @@ public class BillingPlugin implements IPlugin {
 								return;
 							}
 
-							response = mService.consumePurchase(3, _ctx.getPackageName(), TOKEN);
+							//response = mService.consumePurchase(3, _ctx.getPackageName(), TOKEN);
 						}
 
 						if (response != 0) {
@@ -415,7 +417,7 @@ public class BillingPlugin implements IPlugin {
 					return;
 				}
 
-				ownedItems = mService.getPurchases(3, _ctx.getPackageName(), "inapp", null);
+				//ownedItems = mService.getPurchases(3, _ctx.getPackageName(), "inapp", null);
 			}
 
 			// If unable to create bundle,
