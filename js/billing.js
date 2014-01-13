@@ -66,7 +66,7 @@ function creditConsumedItem(item, token, receiptString) {
 			logger.log(item);
 			if(token && receiptString && receiptString!=="noreceipt")
 			{
-				onPurchase(item, receiptString);
+				onPurchase(item, receiptString, token);
 			}
 			else
 			{
@@ -306,10 +306,8 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 				onFailure(failure, sku);
 			}
 		} else {
-				logger.log("yay");
 				if(evt.receiptString)
 				{
-					logger.log("inside if of billing purchase")
 					nativePurchasedItem(sku, evt.token, evt.receiptString);
 				}
 				else

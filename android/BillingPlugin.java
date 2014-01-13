@@ -56,12 +56,13 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public class ConsumeEvent extends com.tealeaf.event.Event {
-		String token, failure;
+		String token, failure, receiptString;
 
-		public ConsumeEvent(String token, String failure) {
+		public ConsumeEvent(String token, String failure, String receiptString) {
 			super("billingConsume");
 			this.token = token;
 			this.failure = failure;
+			this.receiptString = receiptString;
 		}
 	}
 
@@ -207,11 +208,12 @@ public class BillingPlugin implements IPlugin {
 		try {
 			JSONObject jsonObject = new JSONObject(jsonData);
 			final String TOKEN = jsonObject.getString("token");
+			final String RECEIPT = jsonObject.getString("receiptString");
 			token = TOKEN;
 
 			synchronized (mServiceLock) {
 				if (mService == null) {
-					EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
+					EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service", null));
 					return;
 				}
 			}
@@ -227,7 +229,7 @@ public class BillingPlugin implements IPlugin {
 
 						synchronized (mServiceLock) {
 							if (mService == null) {
-								EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
+								EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service", null));
 								return;
 							}
 
@@ -236,22 +238,22 @@ public class BillingPlugin implements IPlugin {
 
 						if (response != 0) {
 							logger.log("{billing} Consume failed:", TOKEN, "for reason:", response);
-							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel"));
+							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel", null));
 						} else {
 							logger.log("{billing} Consume suceeded:", TOKEN);
-							EventQueue.pushEvent(new ConsumeEvent(TOKEN, null));
+							EventQueue.pushEvent(new ConsumeEvent(TOKEN, null, RECEIPT));
 						}
 					} catch (Exception e) {
 						logger.log("{billing} WARNING: Failure in consume:", e);
 						e.printStackTrace();
-						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed"));
+						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed", null));
 					}
 				}
 			}.start();
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in consume:", e);
 			e.printStackTrace();
-			EventQueue.pushEvent(new ConsumeEvent(token, "failed"));
+			EventQueue.pushEvent(new ConsumeEvent(token, "failed", null));
 		}
 	}
 
@@ -372,8 +374,8 @@ public class BillingPlugin implements IPlugin {
 
 								logger.log("{billing} Successfully purchased SKU:", sku);
 								JSONObject receiptStringCombo = new JSONObject();
-								receiptStringCombo.append("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
-								receiptStringCombo.append("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"))
+								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
+								receiptStringCombo.put("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"));
 								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 								break;
 							case Activity.RESULT_CANCELED:
