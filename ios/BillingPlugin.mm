@@ -159,7 +159,6 @@
 					NSData *receiptFile = transaction.transactionReceipt;
 					receiptString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
 				}
-				NSLog(@"=====================\n===================\n%@", receiptString);
 				[self completeTransaction:transaction receiptString:receiptString];
 				break;
 			case SKPaymentTransactionStateRestored:

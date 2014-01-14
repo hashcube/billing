@@ -61,9 +61,6 @@ function purchasedItem(item) {
 function creditConsumedItem(item, token, receiptString) {
 	try {
 		if (typeof onPurchase === "function" && consumedItems[item]) {
-			logger.log("inside creditconsumeitem");
-			logger.log(receiptString);
-			logger.log(item);
 			if(token && receiptString && receiptString!=="noreceipt")
 			{
 				onPurchase(item, receiptString, token);
@@ -277,8 +274,6 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 
 	function nativePurchasedItem(sku, token, receiptString) {
 		// Set up map
-		logger.log("nativepurchaseditem");
-		logger.log(receiptString);
 		tokenItem[token] = sku;
 		itemToken[sku] = token;
 
