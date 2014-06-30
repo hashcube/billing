@@ -211,6 +211,13 @@ var Billing = Class(Emitter, function (supr) {
 		});
 	};
 
+	this.requestLocalizedPrices = function(params, next) {
+		NATIVE.plugins.sendEvent("BillingPlugin", "requestLocalizedPrices",
+				JSON.stringify({
+					"skus": params
+				}));
+		this.localizeResponse = next;
+	}
 	this.purchase = simulatePurchase;
 });
 
@@ -307,7 +314,7 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 				}
 				else
 				{
-					nativePurchasedItem(sku, evt.token);	
+					nativePurchasedItem(sku, evt.token);
 				}
 		}
 	});
@@ -379,6 +386,10 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 		isConnected = evt.connected;
 
 		onMarketStateChange();
+	});
+
+	NATIVE.events.registerHandler('billingLocalizedPrices', function(evt) {
+		billing.localizeResponse(evt);
 	});
 
 	window.addEventListener("online", function() {

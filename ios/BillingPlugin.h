@@ -14,5 +14,6 @@
 - (void) purchase:(NSDictionary *)jsonObject;
 - (void) consume:(NSDictionary *)jsonObject;
 - (void) getPurchases:(NSDictionary *)jsonObject;
+- (void) requestLocalizedPrices: (NSDictionary *)jsonObject;
 
 @end

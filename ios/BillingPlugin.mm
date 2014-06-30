@@ -98,9 +98,35 @@
 
 	bool success = false;
 	NSString *sku = nil;
+	NSUInteger len = [self.bundleID length] + 1;
 
 	NSArray *products = response.products;
-	if (products.count > 0) {
+
+	//TODO: Do better, right now assuming if product count is > 1 it is for info
+	if (products.count > 1) {
+		NSMutableDictionary *prices = [[NSMutableDictionary alloc] init];
+		NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+		[numberFormatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
+		[numberFormatter setNumberStyle:NSNumberFormatterCurrencyStyle];
+
+		for (SKProduct* product in products) {
+			[numberFormatter setLocale:product.priceLocale];
+			NSString *formattedPrice = [numberFormatter stringFromNumber:product.price];
+
+			sku = product.productIdentifier;
+			if (sku != nil && [sku hasPrefix:self.bundleID]) {
+				sku = [sku substringFromIndex:len];
+				[prices setObject:formattedPrice forKey:sku];
+			}
+
+		}
+		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
+			@"billingLocalizedPrices",@"name",
+			prices,@"data",
+			nil]];
+		return;
+	}
+	else if (products.count > 0) {
 		SKProduct *product = [products objectAtIndex:0];
 
 		if (product) {
@@ -122,7 +148,7 @@
 	if (!success) {
 		// Strip bundleID prefix
 		if (sku != nil && [sku hasPrefix:self.bundleID]) {
-			sku = [sku substringFromIndex:([self.bundleID length] + 1)];
+			sku = [sku substringFromIndex:len];
 		}
 
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
@@ -219,6 +245,27 @@
 										  @"billingConnected",@"name",
 										  (isMarketAvailable ? kCFBooleanTrue : kCFBooleanFalse), @"connected",
 										  nil]];
+}
+
+- (void) requestLocalizedPrices: (NSDictionary *)jsonObject {
+
+	NSString *bundledProductId;
+	NSMutableSet *products = [[NSMutableSet alloc] init];
+
+	id skus = [jsonObject valueForKey:@"skus"];
+
+	for (id key in skus) {
+		bundledProductId = [self.bundleID stringByAppendingFormat:@".%@", key];
+		[products addObject:bundledProductId];
+	}
+
+	NSSet *productIdentifiers = [NSSet setWithSet: (NSSet *)products];
+
+	// Create a products request
+	SKProductsRequest *productsRequest = [[SKProductsRequest alloc] initWithProductIdentifiers:productIdentifiers];
+	productsRequest.delegate = self;
+
+	[productsRequest start];
 }
 
 - (void) purchase:(NSDictionary *)jsonObject {
