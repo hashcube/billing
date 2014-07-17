@@ -38,11 +38,8 @@ import com.tealeaf.EventQueue;
 import com.tealeaf.event.*;
 
 
-import com.amazon.inapp.purchasing.BasePurchasingObserver;
-import com.amazon.inapp.purchasing.PurchasingManager;
-import com.amazon.inapp.purchasing.ItemDataResponse;
-import com.amazon.inapp.purchasing.PurchaseResponse;
-import com.amazon.inapp.purchasing.Receipt;
+import com.amazon.device.iap.*;
+import com.amazon.device.iap.model.*;
 
 public class BillingPlugin implements IPlugin {
 	Context _ctx = null;
@@ -55,20 +52,21 @@ public class BillingPlugin implements IPlugin {
 	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
-	
-	private class MyObserver extends BasePurchasingObserver {
 
-		public MyObserver(Activity _activity) {
-		    super(_activity);	 
+	private class MyListener implements PurchasingListener {
+
+		public MyListener() {
+		    super();
 		}
 
 		@Override
-		public void onItemDataResponse(ItemDataResponse itemDataResponse) {
+		public void onProductDataResponse(ProductDataResponse itemDataResponse) {}
 
-		    //Check itemDataResponse.getItemDataRequestStatus();
-		    //Use itemDataResponse to populate catalog data
+		@Override
+		public void onUserDataResponse(UserDataResponse userDataResponse) {}
 
-		}
+		@Override
+		public void onPurchaseUpdatesResponse(PurchaseUpdatesResponse purchaseUpdatesResponse) {}
 
 		@Override
 		public void onPurchaseResponse(PurchaseResponse purchaseResponse) {
@@ -77,29 +75,29 @@ public class BillingPlugin implements IPlugin {
 		    //If SUCCESSFUL, fulfill content;
 		    logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
-				String responseCode = purchaseResponse.getPurchaseRequestStatus().toString();
+				String responseCode = purchaseResponse.getRequestStatus().toString();
 				if (responseCode.equals("SUCCESSFUL"))
 				{
 					Receipt receipt = purchaseResponse.getReceipt();
 					String shortSKU = receipt.getSku();
-					shortSKU = shortSKU.substring(shortSKU.lastIndexOf(".")+1);
-					logger.log("{billing} Successfully purchased SKU: \""+ shortSKU+ " \"with token: " + receipt.getPurchaseToken());
-					EventQueue.pushEvent(new PurchaseEvent(shortSKU, receipt.getPurchaseToken(), null));
+					shortSKU = shortSKU.substring(shortSKU.lastIndexOf(".") + 1);
+					logger.log("{billing} Successfully purchased SKU: \""+ shortSKU+ " \"with token: " + receipt.getReceiptId());
+					EventQueue.pushEvent(new PurchaseEvent(shortSKU, receipt.getReceiptId(), null));
 				}
 				else if(responseCode.equals("ALREADY_ENTITLED"))
 				{
 					logger.log("{billing} WARNING: Already Entitled to the Goods with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));					
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
 				}
 				else if(responseCode.equals("INVALID_SKU"))
 				{
 					logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));					
-				}				
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
+				}
 				else
 				{
 					logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));					
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
 				}
 			} catch (Exception e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
@@ -107,7 +105,7 @@ public class BillingPlugin implements IPlugin {
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed"));
 			}
 		}
-	} 
+	}
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure;
@@ -168,7 +166,7 @@ public class BillingPlugin implements IPlugin {
 				}
 
 			@Override
-				public void onServiceConnected(ComponentName name, 
+				public void onServiceConnected(ComponentName name,
 						IBinder service) {
 					synchronized (mServiceLock) {
 						mService = null;
@@ -185,7 +183,7 @@ public class BillingPlugin implements IPlugin {
 		_activity = activity;
 
 		/*
-		_ctx.bindService(new 
+		_ctx.bindService(new
 				Intent("com.android.vending.billing.InAppBillingService.BIND"),
 				mServiceConn, Context.BIND_AUTO_CREATE);
 				*/
@@ -216,14 +214,14 @@ public class BillingPlugin implements IPlugin {
 		    deviceIs = DeviceType.KINDLE;
 		} catch (Exception e) {
 		    e.printStackTrace();
-		}		
+		}
     */
 		switch(deviceIs)
 		{
 			case KINDLE:
 						logger.log("{billing} Switched to KINDLE ");
 						try {
-							PurchasingManager.registerObserver(new MyObserver(_activity));
+							PurchasingService.registerListener(_ctx, new MyListener());
 						} catch (Exception e) {
 							logger.log("{billing} WARNING: Failure in purchase init:", e);
 							e.printStackTrace();
@@ -235,10 +233,10 @@ public class BillingPlugin implements IPlugin {
 							logger.log("{billing} onstart stackTrace: "+stackTrace);
 						}
 						break;
-			case ANDROID: 
+			case ANDROID:
 						logger.log("{billing} Switched to ANDROID");
 			            break;
-			default: 
+			default:
 						logger.log("{billing} Switched to ANDROID BY DEFAULT");
 			            deviceIs = DeviceType.ANDROID;
 					 	break;
@@ -276,14 +274,14 @@ public class BillingPlugin implements IPlugin {
 			sku = jsonObject.getString("sku");
 			String fullSKU = pkgName+"."+sku;
 			logger.log("{billing} Doing Billing for sku: "+fullSKU);
-			String requestId = PurchasingManager.initiatePurchaseRequest(fullSKU);
+			String requestId = PurchasingService.purchase(fullSKU).toString();
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in purchase:", e);
 			e.printStackTrace();
 			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
 		}
 	}
-	
+
 	public void purchase(String jsonData) {
 		if(deviceIs == DeviceType.KINDLE)
 		{
@@ -422,17 +420,18 @@ public class BillingPlugin implements IPlugin {
 
 			// If unable to create bundle,
 			int responseCode = ownedItems.getInt("RESPONSE_CODE", 1);
+			logger.log("RESPONSE_CODE ::: " + responseCode);
 			if (responseCode != 0) {
 				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
 				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 			} else {
-				ArrayList ownedSkus = 
+				ArrayList ownedSkus =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-				ArrayList purchaseDataList = 
+				ArrayList purchaseDataList =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-				//ArrayList signatureList = 
+				//ArrayList signatureList =
 				//	ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
-				//String continuationToken = 
+				//String continuationToken =
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
@@ -442,7 +441,7 @@ public class BillingPlugin implements IPlugin {
 
 					JSONObject json = new JSONObject(purchaseData);
 					String token = json.getString("purchaseToken");
-					logger.log("{billing}====== token: "+token);
+					logger.log("{billing}====== token: " + token);
 					// TODO: Provide purchase data
 					// TODO: Verify signatures
 
@@ -450,10 +449,9 @@ public class BillingPlugin implements IPlugin {
 						skus.add(sku);
 						tokens.add(token);
 					}
-				} 
+				}
 
 				// TODO: Use continuationToken to retrieve > 700 items
-
 				EventQueue.pushEvent(new OwnedEvent(skus, tokens, null));
 			}
 		} catch (Exception e) {
@@ -535,6 +533,10 @@ public class BillingPlugin implements IPlugin {
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed"));
 			}
 		}
+	}
+
+	public void requestLocalizedPrices(String jsonData) {
+
 	}
 
 	public void onNewIntent(Intent intent) {
