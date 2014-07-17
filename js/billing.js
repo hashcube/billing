@@ -205,6 +205,15 @@ var Billing = Class(Emitter, function (supr) {
 		});
 	};
 
+	this.requestLocalizedPrices = function(params, next) {
+/*		NATIVE.plugins.sendEvent("BillingPlugin", "requestLocalizedPrices",
+				JSON.stringify({
+					"skus": params
+				}));
+		this.localizeResponse = next;*/
+		next ({data: {}});
+	}
+
 	this.purchase = simulatePurchase;
 });
 
