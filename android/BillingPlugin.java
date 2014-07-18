@@ -14,6 +14,7 @@ import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.Iterator;
 import java.io.StringWriter;
@@ -60,7 +61,26 @@ public class BillingPlugin implements IPlugin {
 		}
 
 		@Override
-		public void onProductDataResponse(ProductDataResponse itemDataResponse) {}
+		public void onProductDataResponse(ProductDataResponse itemDataResponse) {
+			switch(itemDataResponse.getRequestStatus()) {
+				case SUCCESSFUL:
+					 							for (final String sku : itemDataResponse.getUnavailableSkus()) {
+           								logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
+       		 							}
+
+												final Map<String, Product> products = itemDataResponse.getProductData();
+												final Map<String, String> localizedPrices = new HashMap<String, String>();
+        								for (final String key : products.keySet()) {
+          								Product product = products.get(key);
+          								logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
+          								localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
+        								}
+        								EventQueue.pushEvent(new InfoEvent(localizedPrices));
+      									break;
+     			case FAILED:
+     								logger.log("{BillingAmazon}", "Failed to fetch product data");
+    		}
+		}
 
 		@Override
 		public void onUserDataResponse(UserDataResponse userDataResponse) {}
@@ -146,6 +166,15 @@ public class BillingPlugin implements IPlugin {
 		public ConnectedEvent(boolean connected) {
 			super("billingConnected");
 			this.connected = connected;
+		}
+	}
+
+	public class InfoEvent extends com.tealeaf.event.Event {
+		Map<String, String> data;
+
+		public InfoEvent(Map<String, String> prices) {
+			super("billingLocalizedPrices");
+			this.data = prices;
 		}
 	}
 
@@ -536,7 +565,18 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void requestLocalizedPrices(String jsonData) {
-
+		final Set<String> productSkus = new HashSet<String>();
+		try {
+			JSONObject json = new JSONObject(jsonData);
+			JSONArray data = json.getJSONArray("skus");
+			int length = data.length();
+			for (int i = 0; i < length; i++) {
+				productSkus.add("com.hashcube.sudokuquest." + data.getString(i));
+			}
+			PurchasingService.getProductData(productSkus);
+		} catch (JSONException ex) {
+			ex.printStackTrace();
+		}
 	}
 
 	public void onNewIntent(Intent intent) {
