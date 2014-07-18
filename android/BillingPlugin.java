@@ -92,8 +92,8 @@ public class BillingPlugin implements IPlugin {
 		@Override
 		public void onPurchaseResponse(PurchaseResponse purchaseResponse) {
 
-				//Check purchaseResponse.getPurchaseRequestStatus();
-				//If SUCCESSFUL, fulfill content;
+			//Check purchaseResponse.getPurchaseRequestStatus();
+			//If SUCCESSFUL, fulfill content;
 			logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
