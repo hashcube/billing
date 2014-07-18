@@ -45,10 +45,10 @@ import com.amazon.device.iap.model.*;
 public class BillingPlugin implements IPlugin {
 	Context _ctx = null;
 	Activity _activity = null;
-				String mService = null;
+	String mService = null;
 	ServiceConnection mServiceConn = null;
 	public enum DeviceType {
-			KINDLE, ANDROID
+		KINDLE, ANDROID
 	}
 	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
@@ -57,29 +57,29 @@ public class BillingPlugin implements IPlugin {
 	private class MyListener implements PurchasingListener {
 
 		public MyListener() {
-				super();
+			super();
 		}
 
 		@Override
 		public void onProductDataResponse(ProductDataResponse itemDataResponse) {
 			switch(itemDataResponse.getRequestStatus()) {
 				case SUCCESSFUL:
-					for (final String sku : itemDataResponse.getUnavailableSkus()) {
-						logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
-					}
+				for (final String sku : itemDataResponse.getUnavailableSkus()) {
+					logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
+				}
 
-					final Map<String, Product> products = itemDataResponse.getProductData();
-					final Map<String, String> localizedPrices = new HashMap<String, String>();
-					for (final String key : products.keySet()) {
-						Product product = products.get(key);
-						logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
-						localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
-					}
-					EventQueue.pushEvent(new InfoEvent(localizedPrices));
-					break;
+				final Map<String, Product> products = itemDataResponse.getProductData();
+				final Map<String, String> localizedPrices = new HashMap<String, String>();
+				for (final String key : products.keySet()) {
+					Product product = products.get(key);
+					logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
+					localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
+				}
+				EventQueue.pushEvent(new InfoEvent(localizedPrices));
+				break;
 				case FAILED:
-						logger.log("{BillingAmazon}", "Failed to fetch product data");
-						break;
+				logger.log("{BillingAmazon}", "Failed to fetch product data");
+				break;
 			}
 		}
 
@@ -94,7 +94,7 @@ public class BillingPlugin implements IPlugin {
 
 				//Check purchaseResponse.getPurchaseRequestStatus();
 				//If SUCCESSFUL, fulfill content;
-				logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
+			logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
 				if (responseCode.equals("SUCCESSFUL"))
@@ -187,23 +187,23 @@ public class BillingPlugin implements IPlugin {
 
 		mServiceConn = new ServiceConnection() {
 			@Override
-				public void onServiceDisconnected(ComponentName name) {
-					synchronized (mServiceLock) {
-						mService = null;
-					}
-
-					EventQueue.pushEvent(new ConnectedEvent(false));
+			public void onServiceDisconnected(ComponentName name) {
+				synchronized (mServiceLock) {
+					mService = null;
 				}
+
+				EventQueue.pushEvent(new ConnectedEvent(false));
+			}
 
 			@Override
-				public void onServiceConnected(ComponentName name,
-						IBinder service) {
-					synchronized (mServiceLock) {
-						mService = null;
-					}
-
-					EventQueue.pushEvent(new ConnectedEvent(true));
+			public void onServiceConnected(ComponentName name,
+				IBinder service) {
+				synchronized (mServiceLock) {
+					mService = null;
 				}
+
+				EventQueue.pushEvent(new ConnectedEvent(true));
+			}
 		};
 	}
 
@@ -217,13 +217,13 @@ public class BillingPlugin implements IPlugin {
 				Intent("com.android.vending.billing.InAppBillingService.BIND"),
 				mServiceConn, Context.BIND_AUTO_CREATE);
 				*/
-	}
+}
 
-	public void onResume() {
-	}
+public void onResume() {
+}
 
-	public void onStart() {
-		final PackageManager packageManager = _ctx.getPackageManager();
+public void onStart() {
+	final PackageManager packageManager = _ctx.getPackageManager();
 
 		/*
 		try {
@@ -249,27 +249,27 @@ public class BillingPlugin implements IPlugin {
 		switch(deviceIs)
 		{
 			case KINDLE:
-						logger.log("{billing} Switched to KINDLE ");
-						try {
-							PurchasingService.registerListener(_ctx, new MyListener());
-						} catch (Exception e) {
-							logger.log("{billing} WARNING: Failure in purchase init:", e);
-							e.printStackTrace();
-							StringWriter writer = new StringWriter();
-							PrintWriter printWriter = new PrintWriter( writer );
-							e.printStackTrace( printWriter );
-							printWriter.flush();
-							String stackTrace = writer.toString();
-							logger.log("{billing} onstart stackTrace: "+stackTrace);
-						}
-						break;
+			logger.log("{billing} Switched to KINDLE ");
+			try {
+				PurchasingService.registerListener(_ctx, new MyListener());
+			} catch (Exception e) {
+				logger.log("{billing} WARNING: Failure in purchase init:", e);
+				e.printStackTrace();
+				StringWriter writer = new StringWriter();
+				PrintWriter printWriter = new PrintWriter( writer );
+				e.printStackTrace( printWriter );
+				printWriter.flush();
+				String stackTrace = writer.toString();
+				logger.log("{billing} onstart stackTrace: "+stackTrace);
+			}
+			break;
 			case ANDROID:
-						logger.log("{billing} Switched to ANDROID");
-									break;
+			logger.log("{billing} Switched to ANDROID");
+			break;
 			default:
-						logger.log("{billing} Switched to ANDROID BY DEFAULT");
-									deviceIs = DeviceType.ANDROID;
-						break;
+			logger.log("{billing} Switched to ANDROID BY DEFAULT");
+			deviceIs = DeviceType.ANDROID;
+			break;
 		}
 	}
 
@@ -352,8 +352,8 @@ public class BillingPlugin implements IPlugin {
 					logger.log("{billing} WARNING: Unable to create pending intent for sku", sku);
 				} else {
 					_activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
-							BUY_REQUEST_CODE, new Intent(), Integer.valueOf(0),
-							Integer.valueOf(0), Integer.valueOf(0));
+						BUY_REQUEST_CODE, new Intent(), Integer.valueOf(0),
+						Integer.valueOf(0), Integer.valueOf(0));
 					success = true;
 				}
 			}
@@ -450,15 +450,14 @@ public class BillingPlugin implements IPlugin {
 
 			// If unable to create bundle,
 			int responseCode = ownedItems.getInt("RESPONSE_CODE", 1);
-			logger.log("RESPONSE_CODE ::: " + responseCode);
 			if (responseCode != 0) {
 				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
 				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 			} else {
 				ArrayList ownedSkus =
-					ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
+				ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
 				ArrayList purchaseDataList =
-					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
+				ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
 				//ArrayList signatureList =
 				//  ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
 				//String continuationToken =
@@ -499,23 +498,23 @@ public class BillingPlugin implements IPlugin {
 
 			switch (responseCode) {
 				case 0:
-					return "ok";
+				return "ok";
 				case 1:
-					return "cancel";
+				return "cancel";
 				case 2:
-					return "service";
+				return "service";
 				case 3:
-					return "billing unavailable";
+				return "billing unavailable";
 				case 4:
-					return "item unavailable";
+				return "item unavailable";
 				case 5:
-					return "invalid arguments provided to API";
+				return "invalid arguments provided to API";
 				case 6:
-					return "fatal error in API";
+				return "fatal error in API";
 				case 7:
-					return "already owned";
+				return "already owned";
 				case 8:
-					return "item not owned";
+				return "item not owned";
 			}
 		} catch (Exception e) {
 		}
@@ -542,18 +541,18 @@ public class BillingPlugin implements IPlugin {
 					} else {
 						switch (resultCode) {
 							case Activity.RESULT_OK:
-								String token = jo.getString("purchaseToken");
+							String token = jo.getString("purchaseToken");
 
-								logger.log("{billing} Successfully purchased SKU:", sku);
-								EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
-								break;
+							logger.log("{billing} Successfully purchased SKU:", sku);
+							EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
+							break;
 							case Activity.RESULT_CANCELED:
-								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
-								break;
+							logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+							break;
 							default:
-								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+							logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
 						}
 					}
 				}
@@ -572,7 +571,7 @@ public class BillingPlugin implements IPlugin {
 			JSONArray data = json.getJSONArray("skus");
 			int length = data.length();
 			for (int i = 0; i < length; i++) {
-				productSkus.add("com.hashcube.sudokuquest." + data.getString(i));
+				productSkus.add(_ctx.getPackageName() + "." + data.getString(i));
 			}
 			PurchasingService.getProductData(productSkus);
 		} catch (JSONException ex) {
