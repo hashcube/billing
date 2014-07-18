@@ -45,10 +45,10 @@ import com.amazon.device.iap.model.*;
 public class BillingPlugin implements IPlugin {
 	Context _ctx = null;
 	Activity _activity = null;
-        String mService = null;
+				String mService = null;
 	ServiceConnection mServiceConn = null;
 	public enum DeviceType {
-    	KINDLE, ANDROID
+			KINDLE, ANDROID
 	}
 	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
@@ -57,29 +57,30 @@ public class BillingPlugin implements IPlugin {
 	private class MyListener implements PurchasingListener {
 
 		public MyListener() {
-		    super();
+				super();
 		}
 
 		@Override
 		public void onProductDataResponse(ProductDataResponse itemDataResponse) {
 			switch(itemDataResponse.getRequestStatus()) {
 				case SUCCESSFUL:
-					 							for (final String sku : itemDataResponse.getUnavailableSkus()) {
-           								logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
-       		 							}
+					for (final String sku : itemDataResponse.getUnavailableSkus()) {
+						logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
+					}
 
-												final Map<String, Product> products = itemDataResponse.getProductData();
-												final Map<String, String> localizedPrices = new HashMap<String, String>();
-        								for (final String key : products.keySet()) {
-          								Product product = products.get(key);
-          								logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
-          								localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
-        								}
-        								EventQueue.pushEvent(new InfoEvent(localizedPrices));
-      									break;
-     			case FAILED:
-     								logger.log("{BillingAmazon}", "Failed to fetch product data");
-    		}
+					final Map<String, Product> products = itemDataResponse.getProductData();
+					final Map<String, String> localizedPrices = new HashMap<String, String>();
+					for (final String key : products.keySet()) {
+						Product product = products.get(key);
+						logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
+						localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
+					}
+					EventQueue.pushEvent(new InfoEvent(localizedPrices));
+					break;
+				case FAILED:
+						logger.log("{BillingAmazon}", "Failed to fetch product data");
+						break;
+			}
 		}
 
 		@Override
@@ -91,9 +92,9 @@ public class BillingPlugin implements IPlugin {
 		@Override
 		public void onPurchaseResponse(PurchaseResponse purchaseResponse) {
 
-		    //Check purchaseResponse.getPurchaseRequestStatus();
-		    //If SUCCESSFUL, fulfill content;
-		    logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
+				//Check purchaseResponse.getPurchaseRequestStatus();
+				//If SUCCESSFUL, fulfill content;
+				logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
 				if (responseCode.equals("SUCCESSFUL"))
@@ -224,27 +225,27 @@ public class BillingPlugin implements IPlugin {
 	public void onStart() {
 		final PackageManager packageManager = _ctx.getPackageManager();
 
-    /*
+		/*
 		try {
-		    final ApplicationInfo applicationInfo = packageManager.getApplicationInfo(_ctx.getPackageName(), 0);
-		    if ("com.amazon.venezia".equals(packageManager.getInstallerPackageName(applicationInfo.packageName))) {
-		        // App was installed by Amazon App Store
-		        deviceIs = DeviceType.KINDLE;
-		    }
-		    else if("com.android.vending".equals(packageManager.getInstallerPackageName(applicationInfo.packageName))) {
-		    	// App was installed by Google Play Store
-		        deviceIs = DeviceType.ANDROID;
-		    }
-		    else
-		    {
-		    	// Default Market selected as Google Play Store {defaults}
-		    	deviceIs = DeviceType.ANDROID;
-		    }
-		    deviceIs = DeviceType.KINDLE;
+				final ApplicationInfo applicationInfo = packageManager.getApplicationInfo(_ctx.getPackageName(), 0);
+				if ("com.amazon.venezia".equals(packageManager.getInstallerPackageName(applicationInfo.packageName))) {
+						// App was installed by Amazon App Store
+						deviceIs = DeviceType.KINDLE;
+				}
+				else if("com.android.vending".equals(packageManager.getInstallerPackageName(applicationInfo.packageName))) {
+					// App was installed by Google Play Store
+						deviceIs = DeviceType.ANDROID;
+				}
+				else
+				{
+					// Default Market selected as Google Play Store {defaults}
+					deviceIs = DeviceType.ANDROID;
+				}
+				deviceIs = DeviceType.KINDLE;
 		} catch (Exception e) {
-		    e.printStackTrace();
+				e.printStackTrace();
 		}
-    */
+		*/
 		switch(deviceIs)
 		{
 			case KINDLE:
@@ -264,11 +265,11 @@ public class BillingPlugin implements IPlugin {
 						break;
 			case ANDROID:
 						logger.log("{billing} Switched to ANDROID");
-			            break;
+									break;
 			default:
 						logger.log("{billing} Switched to ANDROID BY DEFAULT");
-			            deviceIs = DeviceType.ANDROID;
-					 	break;
+									deviceIs = DeviceType.ANDROID;
+						break;
 		}
 	}
 
@@ -338,7 +339,7 @@ public class BillingPlugin implements IPlugin {
 				// TODO: Add additional security with extra field ("1")
 
 				//buyIntentBundle = mService.getBuyIntent(3, _ctx.getPackageName(),
-				//		sku, "inapp", "1");
+				//    sku, "inapp", "1");
 			}
 
 			// If unable to create bundle,
@@ -459,9 +460,9 @@ public class BillingPlugin implements IPlugin {
 				ArrayList purchaseDataList =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
 				//ArrayList signatureList =
-				//	ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
+				//  ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
 				//String continuationToken =
-				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
+				//  ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
 					//String signature = signatureList.get(i);
