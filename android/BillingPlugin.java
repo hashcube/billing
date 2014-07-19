@@ -209,351 +209,344 @@ public class BillingPlugin implements IPlugin {
 
 	public void onCreate(Activity activity, Bundle savedInstanceState) {
 		logger.log("{billing} Installing listener");
-
 		_activity = activity;
-
-		/*
-		_ctx.bindService(new
-				Intent("com.android.vending.billing.InAppBillingService.BIND"),
-				mServiceConn, Context.BIND_AUTO_CREATE);
-				*/
-}
-
-public void onResume() {
-}
-
-public void onStart() {
-	final PackageManager packageManager = _ctx.getPackageManager();
-	switch(deviceIs)
-	{
-		case KINDLE:
-		logger.log("{billing} Switched to KINDLE ");
-		try {
-			PurchasingService.registerListener(_ctx, new MyListener());
-		} catch (Exception e) {
-			logger.log("{billing} WARNING: Failure in purchase init:", e);
-			e.printStackTrace();
-			StringWriter writer = new StringWriter();
-			PrintWriter printWriter = new PrintWriter( writer );
-			e.printStackTrace( printWriter );
-			printWriter.flush();
-			String stackTrace = writer.toString();
-			logger.log("{billing} onstart stackTrace: "+stackTrace);
-		}
-		break;
-		case ANDROID:
-		logger.log("{billing} Switched to ANDROID");
-		break;
-		default:
-		logger.log("{billing} Switched to ANDROID BY DEFAULT");
-		deviceIs = DeviceType.ANDROID;
-		break;
 	}
-}
 
-public void onPause() {
-}
-
-public void onStop() {
-}
-
-public void onDestroy() {
-	if (mServiceConn != null) {
-		_ctx.unbindService(mServiceConn);
+	public void onResume() {
 	}
-}
 
-public void isConnected(String jsonData) {
-	synchronized (mServiceLock) {
-		if (mService == null) {
-			EventQueue.pushEvent(new ConnectedEvent(false));
-		} else {
-			EventQueue.pushEvent(new ConnectedEvent(true));
+	public void onStart() {
+		final PackageManager packageManager = _ctx.getPackageManager();
+		switch(deviceIs)
+		{
+			case KINDLE:
+			logger.log("{billing} Switched to KINDLE ");
+			try {
+				PurchasingService.registerListener(_ctx, new MyListener());
+			} catch (Exception e) {
+				logger.log("{billing} WARNING: Failure in purchase init:", e);
+				e.printStackTrace();
+				StringWriter writer = new StringWriter();
+				PrintWriter printWriter = new PrintWriter( writer );
+				e.printStackTrace( printWriter );
+				printWriter.flush();
+				String stackTrace = writer.toString();
+				logger.log("{billing} onstart stackTrace: "+stackTrace);
+			}
+			break;
+			case ANDROID:
+			logger.log("{billing} Switched to ANDROID");
+			break;
+			default:
+			logger.log("{billing} Switched to ANDROID BY DEFAULT");
+			deviceIs = DeviceType.ANDROID;
+			break;
 		}
 	}
-}
 
-public void purchaseForKindle(String jsonData) {
-	String sku = null;
-	String pkgName = _ctx.getPackageName();
-	logger.log("{billing} In transaction purchase for Amazon Kindle");
-	try {
-		JSONObject jsonObject = new JSONObject(jsonData);
-		sku = jsonObject.getString("sku");
-		String fullSKU = pkgName+"."+sku;
-		logger.log("{billing} Doing Billing for sku: "+fullSKU);
-		String requestId = PurchasingService.purchase(fullSKU).toString();
-	} catch (Exception e) {
-		logger.log("{billing} WARNING: Failure in purchase:", e);
-		e.printStackTrace();
-		EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
+	public void onPause() {
 	}
-}
 
-public void purchase(String jsonData) {
-	if(deviceIs == DeviceType.KINDLE)
-	{
-		logger.log("{billing} Initiating purchase for Amazon Kindle");
-		purchaseForKindle(jsonData);
-		return;
+	public void onStop() {
 	}
-	boolean success = false;
-	String sku = null;
 
-	try {
-		JSONObject jsonObject = new JSONObject(jsonData);
-		sku = jsonObject.getString("sku");
+	public void onDestroy() {
+		if (mServiceConn != null) {
+			_ctx.unbindService(mServiceConn);
+		}
+	}
 
-		logger.log("{billing} Purchasing:", sku);
-
-		Bundle buyIntentBundle = null;
-
+	public void isConnected(String jsonData) {
 		synchronized (mServiceLock) {
 			if (mService == null) {
-				EventQueue.pushEvent(new PurchaseEvent(sku, null, "service"));
-				return;
-			}
-		}
-
-			// If unable to create bundle,
-		if (buyIntentBundle == null || buyIntentBundle.getInt("RESPONSE_CODE", 1) != 0) {
-			logger.log("{billing} WARNING: Unable to create intent bundle for sku", sku);
-		} else {
-			PendingIntent pendingIntent = buyIntentBundle.getParcelable("BUY_INTENT");
-
-			if (pendingIntent == null) {
-				logger.log("{billing} WARNING: Unable to create pending intent for sku", sku);
+				EventQueue.pushEvent(new ConnectedEvent(false));
 			} else {
-				_activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
-					BUY_REQUEST_CODE, new Intent(), Integer.valueOf(0),
-					Integer.valueOf(0), Integer.valueOf(0));
-				success = true;
+				EventQueue.pushEvent(new ConnectedEvent(true));
 			}
 		}
-	} catch (Exception e) {
-		logger.log("{billing} WARNING: Failure in purchase:", e);
-		e.printStackTrace();
 	}
 
-	if (!success && sku != null) {
-		EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
+	public void purchaseForKindle(String jsonData) {
+		String sku = null;
+		String pkgName = _ctx.getPackageName();
+		logger.log("{billing} In transaction purchase for Amazon Kindle");
+		try {
+			JSONObject jsonObject = new JSONObject(jsonData);
+			sku = jsonObject.getString("sku");
+			String fullSKU = pkgName+"."+sku;
+			logger.log("{billing} Doing Billing for sku: "+fullSKU);
+			String requestId = PurchasingService.purchase(fullSKU).toString();
+		} catch (Exception e) {
+			logger.log("{billing} WARNING: Failure in purchase:", e);
+			e.printStackTrace();
+			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
+		}
 	}
-}
 
-public void consume(String jsonData) {
-	String token = null;
-
-	try {
-		JSONObject jsonObject = new JSONObject(jsonData);
-		final String TOKEN = jsonObject.getString("token");
-		token = TOKEN;
-
+	public void purchase(String jsonData) {
 		if(deviceIs == DeviceType.KINDLE)
 		{
-			logger.log("{billing} Consuming:", TOKEN);
-			logger.log("{billing} Consume suceeded:", TOKEN);
-			EventQueue.pushEvent(new ConsumeEvent(TOKEN, null));
+			logger.log("{billing} Initiating purchase for Amazon Kindle");
+			purchaseForKindle(jsonData);
 			return;
 		}
+		boolean success = false;
+		String sku = null;
 
-		synchronized (mServiceLock) {
-			if (mService == null) {
-				EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
-				return;
-			}
-		}
+		try {
+			JSONObject jsonObject = new JSONObject(jsonData);
+			sku = jsonObject.getString("sku");
 
-		logger.log("{billing} Consuming:", TOKEN);
+			logger.log("{billing} Purchasing:", sku);
 
-		new Thread() {
-			public void run() {
-				try {
-					logger.log("{billing} Consuming from thread:", TOKEN);
-					int response = 1;
-					synchronized (mServiceLock) {
-						if (mService == null) {
-							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
-							return;
-						}
-					}
+			Bundle buyIntentBundle = null;
 
-					if (response != 0) {
-						logger.log("{billing} Consume failed:", TOKEN, "for reason:", response);
-						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel"));
-					} else {
-						logger.log("{billing} Consume suceeded:", TOKEN);
-						EventQueue.pushEvent(new ConsumeEvent(TOKEN, null));
-					}
-				} catch (Exception e) {
-					logger.log("{billing} WARNING: Failure in consume:", e);
-					e.printStackTrace();
-					EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed"));
+			synchronized (mServiceLock) {
+				if (mService == null) {
+					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service"));
+					return;
 				}
 			}
-		}.start();
-	} catch (Exception e) {
-		logger.log("{billing} WARNING: Failure in consume:", e);
-		e.printStackTrace();
-		EventQueue.pushEvent(new ConsumeEvent(token, "failed"));
-	}
-}
 
-public void getPurchases(String jsonData) {
-	ArrayList<String> skus = new ArrayList<String>();
-	ArrayList<String> tokens = new ArrayList<String>();
-	boolean success = false;
-	logger.log("{billing}=======getPurchase: "+jsonData);
-	try {
-		logger.log("{billing} Getting prior purchases");
+		// If unable to create bundle,
+			if (buyIntentBundle == null || buyIntentBundle.getInt("RESPONSE_CODE", 1) != 0) {
+				logger.log("{billing} WARNING: Unable to create intent bundle for sku", sku);
+			} else {
+				PendingIntent pendingIntent = buyIntentBundle.getParcelable("BUY_INTENT");
 
-		Bundle ownedItems = null;
-
-		synchronized (mServiceLock) {
-			if (mService == null) {
-				EventQueue.pushEvent(new OwnedEvent(null, null, "service"));
-				return;
+				if (pendingIntent == null) {
+					logger.log("{billing} WARNING: Unable to create pending intent for sku", sku);
+				} else {
+					_activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
+						BUY_REQUEST_CODE, new Intent(), Integer.valueOf(0),
+						Integer.valueOf(0), Integer.valueOf(0));
+					success = true;
+				}
 			}
+		} catch (Exception e) {
+			logger.log("{billing} WARNING: Failure in purchase:", e);
+			e.printStackTrace();
 		}
 
-			// If unable to create bundle,
-		int responseCode = ownedItems.getInt("RESPONSE_CODE", 1);
-		if (responseCode != 0) {
-			logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
-			EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
-		} else {
-			ArrayList ownedSkus =
-			ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-			ArrayList purchaseDataList =
-			ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-			for (int i = 0; i < ownedSkus.size(); ++i) {
-					//String signature = signatureList.get(i);
-				String sku = (String)ownedSkus.get(i);
-				String purchaseData = (String)purchaseDataList.get(i);
+		if (!success && sku != null) {
+			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed"));
+		}
+	}
 
-				JSONObject json = new JSONObject(purchaseData);
-				String token = json.getString("purchaseToken");
-				logger.log("{billing}====== token: " + token);
+	public void consume(String jsonData) {
+		String token = null;
+
+		try {
+			JSONObject jsonObject = new JSONObject(jsonData);
+			final String TOKEN = jsonObject.getString("token");
+			token = TOKEN;
+
+			if(deviceIs == DeviceType.KINDLE)
+			{
+				logger.log("{billing} Consuming:", TOKEN);
+				logger.log("{billing} Consume suceeded:", TOKEN);
+				EventQueue.pushEvent(new ConsumeEvent(TOKEN, null));
+				return;
+			}
+
+			synchronized (mServiceLock) {
+				if (mService == null) {
+					EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
+					return;
+				}
+			}
+
+			logger.log("{billing} Consuming:", TOKEN);
+
+			new Thread() {
+				public void run() {
+					try {
+						logger.log("{billing} Consuming from thread:", TOKEN);
+						int response = 1;
+						synchronized (mServiceLock) {
+							if (mService == null) {
+								EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service"));
+								return;
+							}
+						}
+
+						if (response != 0) {
+							logger.log("{billing} Consume failed:", TOKEN, "for reason:", response);
+							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel"));
+						} else {
+							logger.log("{billing} Consume suceeded:", TOKEN);
+							EventQueue.pushEvent(new ConsumeEvent(TOKEN, null));
+						}
+					} catch (Exception e) {
+						logger.log("{billing} WARNING: Failure in consume:", e);
+						e.printStackTrace();
+						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed"));
+					}
+				}
+			}.start();
+		} catch (Exception e) {
+			logger.log("{billing} WARNING: Failure in consume:", e);
+			e.printStackTrace();
+			EventQueue.pushEvent(new ConsumeEvent(token, "failed"));
+		}
+	}
+
+	public void getPurchases(String jsonData) {
+		ArrayList<String> skus = new ArrayList<String>();
+		ArrayList<String> tokens = new ArrayList<String>();
+		boolean success = false;
+		logger.log("{billing}=======getPurchase: "+jsonData);
+		try {
+			logger.log("{billing} Getting prior purchases");
+
+			Bundle ownedItems = null;
+
+			synchronized (mServiceLock) {
+				if (mService == null) {
+					EventQueue.pushEvent(new OwnedEvent(null, null, "service"));
+					return;
+				}
+			}
+
+			// If unable to create bundle,
+			int responseCode = ownedItems.getInt("RESPONSE_CODE", 1);
+			if (responseCode != 0) {
+				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
+				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
+			} else {
+				ArrayList ownedSkus =
+				ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
+				ArrayList purchaseDataList =
+				ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
+				for (int i = 0; i < ownedSkus.size(); ++i) {
+					//String signature = signatureList.get(i);
+					String sku = (String)ownedSkus.get(i);
+					String purchaseData = (String)purchaseDataList.get(i);
+
+					JSONObject json = new JSONObject(purchaseData);
+					String token = json.getString("purchaseToken");
+					logger.log("{billing}====== token: " + token);
 					// TODO: Provide purchase data
 					// TODO: Verify signatures
 
-				if (sku != null && token != null) {
-					skus.add(sku);
-					tokens.add(token);
-				}
-			}
-
-				// TODO: Use continuationToken to retrieve > 700 items
-			EventQueue.pushEvent(new OwnedEvent(skus, tokens, null));
-		}
-	} catch (Exception e) {
-		logger.log("{billing} WARNING: Failure in getPurchases:", e);
-		e.printStackTrace();
-		EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
-	}
-}
-
-private String getResponseCode(Intent data) {
-	try {
-		Bundle bundle = data.getExtras();
-
-		int responseCode = bundle.getInt("RESPONSE_CODE");
-
-		switch (responseCode) {
-			case 0:
-			return "ok";
-			case 1:
-			return "cancel";
-			case 2:
-			return "service";
-			case 3:
-			return "billing unavailable";
-			case 4:
-			return "item unavailable";
-			case 5:
-			return "invalid arguments provided to API";
-			case 6:
-			return "fatal error in API";
-			case 7:
-			return "already owned";
-			case 8:
-			return "item not owned";
-		}
-	} catch (Exception e) {
-	}
-
-	return "unknown error";
-}
-
-public void onActivityResult(Integer request, Integer resultCode, Intent data) {
-	if (request == BUY_REQUEST_CODE) {
-		try {
-			String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-			String sku = null;
-			String responseCode = this.getResponseCode(data);
-
-			if (purchaseData == null) {
-				logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
-				EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
-			} else {
-				JSONObject jo = new JSONObject(purchaseData);
-				sku = jo.getString("productId");
-				logger.log("{billing}==========onReturn: "+jo.toString());
-				if (sku == null) {
-					logger.log("{billing} WARNING: Malformed purchase json");
-				} else {
-					switch (resultCode) {
-						case Activity.RESULT_OK:
-						String token = jo.getString("purchaseToken");
-
-						logger.log("{billing} Successfully purchased SKU:", sku);
-						EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
-						break;
-						case Activity.RESULT_CANCELED:
-						logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-						EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
-						break;
-						default:
-						logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-						EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+					if (sku != null && token != null) {
+						skus.add(sku);
+						tokens.add(token);
 					}
 				}
+
+				// TODO: Use continuationToken to retrieve > 700 items
+				EventQueue.pushEvent(new OwnedEvent(skus, tokens, null));
 			}
-		} catch (JSONException e) {
-			logger.log("{billing} WARNING: Failed to parse purchase data:", e);
+		} catch (Exception e) {
+			logger.log("{billing} WARNING: Failure in getPurchases:", e);
 			e.printStackTrace();
-			EventQueue.pushEvent(new PurchaseEvent(null, null, "failed"));
+			EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 		}
 	}
-}
 
-public void requestLocalizedPrices(String jsonData) {
-	final Set<String> productSkus = new HashSet<String>();
-	try {
-		JSONObject json = new JSONObject(jsonData);
-		JSONArray data = json.getJSONArray("skus");
-		int length = data.length();
-		for (int i = 0; i < length; i++) {
-			productSkus.add(_ctx.getPackageName() + "." + data.getString(i));
+	private String getResponseCode(Intent data) {
+		try {
+			Bundle bundle = data.getExtras();
+
+			int responseCode = bundle.getInt("RESPONSE_CODE");
+
+			switch (responseCode) {
+				case 0:
+				return "ok";
+				case 1:
+				return "cancel";
+				case 2:
+				return "service";
+				case 3:
+				return "billing unavailable";
+				case 4:
+				return "item unavailable";
+				case 5:
+				return "invalid arguments provided to API";
+				case 6:
+				return "fatal error in API";
+				case 7:
+				return "already owned";
+				case 8:
+				return "item not owned";
+			}
+		} catch (Exception e) {
 		}
-		PurchasingService.getProductData(productSkus);
-	} catch (JSONException ex) {
-		ex.printStackTrace();
+
+		return "unknown error";
 	}
-}
 
-public void onNewIntent(Intent intent) {
-}
+	public void onActivityResult(Integer request, Integer resultCode, Intent data) {
+		if (request == BUY_REQUEST_CODE) {
+			try {
+				String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
+				String sku = null;
+				String responseCode = this.getResponseCode(data);
 
-public void setInstallReferrer(String referrer) {
-}
+				if (purchaseData == null) {
+					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
+				} else {
+					JSONObject jo = new JSONObject(purchaseData);
+					sku = jo.getString("productId");
+					logger.log("{billing}==========onReturn: "+jo.toString());
+					if (sku == null) {
+						logger.log("{billing} WARNING: Malformed purchase json");
+					} else {
+						switch (resultCode) {
+							case Activity.RESULT_OK:
+							String token = jo.getString("purchaseToken");
 
-public void logError(String error) {
-}
+							logger.log("{billing} Successfully purchased SKU:", sku);
+							EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
+							break;
+							case Activity.RESULT_CANCELED:
+							logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+							break;
+							default:
+							logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+						}
+					}
+				}
+			} catch (JSONException e) {
+				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
+				e.printStackTrace();
+				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed"));
+			}
+		}
+	}
 
-public boolean consumeOnBackPressed() {
-	return true;
-}
+	public void requestLocalizedPrices(String jsonData) {
+		final Set<String> productSkus = new HashSet<String>();
+		try {
+			JSONObject json = new JSONObject(jsonData);
+			JSONArray data = json.getJSONArray("skus");
+			int length = data.length();
+			for (int i = 0; i < length; i++) {
+				productSkus.add(_ctx.getPackageName() + "." + data.getString(i));
+			}
+			PurchasingService.getProductData(productSkus);
+		} catch (JSONException ex) {
+			ex.printStackTrace();
+		}
+	}
 
-public void onBackPressed() {
-}
+	public void onNewIntent(Intent intent) {
+	}
+
+	public void setInstallReferrer(String referrer) {
+	}
+
+	public void logError(String error) {
+	}
+
+	public boolean consumeOnBackPressed() {
+		return true;
+	}
+
+	public void onBackPressed() {
+	}
 }
