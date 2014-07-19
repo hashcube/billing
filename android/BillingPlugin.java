@@ -65,7 +65,7 @@ public class BillingPlugin implements IPlugin {
 			switch(itemDataResponse.getRequestStatus()) {
 				case SUCCESSFUL:
 					for (final String sku : itemDataResponse.getUnavailableSkus()) {
-					logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
+						logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
 					}
 
 					final Map<String, Product> products = itemDataResponse.getProductData();
