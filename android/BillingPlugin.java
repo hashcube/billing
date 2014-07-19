@@ -64,22 +64,22 @@ public class BillingPlugin implements IPlugin {
 		public void onProductDataResponse(ProductDataResponse itemDataResponse) {
 			switch(itemDataResponse.getRequestStatus()) {
 				case SUCCESSFUL:
-				for (final String sku : itemDataResponse.getUnavailableSkus()) {
+					for (final String sku : itemDataResponse.getUnavailableSkus()) {
 					logger.log("{BillingAmazon}", "Unavailable SKU:" + sku);
-				}
+					}
 
-				final Map<String, Product> products = itemDataResponse.getProductData();
-				final Map<String, String> localizedPrices = new HashMap<String, String>();
-				for (final String key : products.keySet()) {
-					Product product = products.get(key);
-					logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
-					localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
-				}
-				EventQueue.pushEvent(new InfoEvent(localizedPrices));
-				break;
+					final Map<String, Product> products = itemDataResponse.getProductData();
+					final Map<String, String> localizedPrices = new HashMap<String, String>();
+					for (final String key : products.keySet()) {
+						Product product = products.get(key);
+						logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
+						localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
+					}
+					EventQueue.pushEvent(new InfoEvent(localizedPrices));
+					break;
 				case FAILED:
-				logger.log("{BillingAmazon}", "Failed to fetch product data");
-				break;
+					logger.log("{BillingAmazon}", "Failed to fetch product data");
+					break;
 			}
 		}
 
@@ -220,27 +220,27 @@ public class BillingPlugin implements IPlugin {
 		switch(deviceIs)
 		{
 			case KINDLE:
-			logger.log("{billing} Switched to KINDLE ");
-			try {
-				PurchasingService.registerListener(_ctx, new MyListener());
-			} catch (Exception e) {
-				logger.log("{billing} WARNING: Failure in purchase init:", e);
-				e.printStackTrace();
-				StringWriter writer = new StringWriter();
-				PrintWriter printWriter = new PrintWriter( writer );
-				e.printStackTrace( printWriter );
-				printWriter.flush();
-				String stackTrace = writer.toString();
-				logger.log("{billing} onstart stackTrace: "+stackTrace);
-			}
-			break;
+				logger.log("{billing} Switched to KINDLE ");
+				try {
+					PurchasingService.registerListener(_ctx, new MyListener());
+				} catch (Exception e) {
+					logger.log("{billing} WARNING: Failure in purchase init:", e);
+					e.printStackTrace();
+					StringWriter writer = new StringWriter();
+					PrintWriter printWriter = new PrintWriter( writer );
+					e.printStackTrace( printWriter );
+					printWriter.flush();
+					String stackTrace = writer.toString();
+					logger.log("{billing} onstart stackTrace: "+stackTrace);
+				}
+				break;
 			case ANDROID:
-			logger.log("{billing} Switched to ANDROID");
-			break;
-			default:
-			logger.log("{billing} Switched to ANDROID BY DEFAULT");
-			deviceIs = DeviceType.ANDROID;
-			break;
+				logger.log("{billing} Switched to ANDROID");
+				break;
+				default:
+				logger.log("{billing} Switched to ANDROID BY DEFAULT");
+				deviceIs = DeviceType.ANDROID;
+				break;
 		}
 	}
 
@@ -308,7 +308,7 @@ public class BillingPlugin implements IPlugin {
 				}
 			}
 
-		// If unable to create bundle,
+			// If unable to create bundle,
 			if (buyIntentBundle == null || buyIntentBundle.getInt("RESPONSE_CODE", 1) != 0) {
 				logger.log("{billing} WARNING: Unable to create intent bundle for sku", sku);
 			} else {
@@ -453,23 +453,23 @@ public class BillingPlugin implements IPlugin {
 
 			switch (responseCode) {
 				case 0:
-				return "ok";
+					return "ok";
 				case 1:
-				return "cancel";
+					return "cancel";
 				case 2:
-				return "service";
+					return "service";
 				case 3:
-				return "billing unavailable";
+					return "billing unavailable";
 				case 4:
-				return "item unavailable";
+					return "item unavailable";
 				case 5:
-				return "invalid arguments provided to API";
+					return "invalid arguments provided to API";
 				case 6:
-				return "fatal error in API";
+					return "fatal error in API";
 				case 7:
-				return "already owned";
+					return "already owned";
 				case 8:
-				return "item not owned";
+					return "item not owned";
 			}
 		} catch (Exception e) {
 		}
@@ -496,18 +496,18 @@ public class BillingPlugin implements IPlugin {
 					} else {
 						switch (resultCode) {
 							case Activity.RESULT_OK:
-							String token = jo.getString("purchaseToken");
+								String token = jo.getString("purchaseToken");
 
-							logger.log("{billing} Successfully purchased SKU:", sku);
-							EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
-							break;
-							case Activity.RESULT_CANCELED:
-							logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
-							break;
+								logger.log("{billing} Successfully purchased SKU:", sku);
+								EventQueue.pushEvent(new PurchaseEvent(sku, token, null));
+								break;
+								case Activity.RESULT_CANCELED:
+								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+								break;
 							default:
-							logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-							EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
+								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode));
 						}
 					}
 				}
