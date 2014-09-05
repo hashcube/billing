@@ -1,6 +1,8 @@
+/* jshint ignore:start */
 import device;
 import event.Emitter as Emitter;
 import util.setProperty as setProperty;
+/* jshint ignore:end */
 
 /*
  * Items are first purchased, and then consumed.
@@ -10,10 +12,22 @@ import util.setProperty as setProperty;
  * localStorage for delivery on the next run.
  */
 
-var purchasedItems = {};
-var consumedItems = {};
-var onPurchase; // callback after consumption
-var onFailure; // callback on purchase failure (not consume fail)
+var purchasedItems = {},
+	consumedItems = {},
+	onPurchase, // callback after consumption
+	onFailure, // callback on purchase failure (not consume fail)
+	// Maps of tokens <-> items from market
+	tokenItem = {},
+	itemToken = {},
+	// Flag: Has read purchases from the market?
+	readPurchases = false,
+	// Flag: Is market service connected?
+	isConnected = true,
+	// Flag: Is connected to the Internet?
+	isOnline = navigator.onLine,
+	// Flag: Is market available?
+	isMarketAvailable = false,
+	Billing;
 
 /*
  * Read the list of consumed items during startup.
@@ -23,12 +37,12 @@ function initializeFromLocalStorage() {
 		var saved = localStorage.getItem("billingConsumed");
 
 		if (saved) {
-			var consumed = JSON.parse(saved);
+			var consumed = JSON.parse(saved), count, item;
 
 			if (typeof consumed === "object") {
 				// Merge with consumed items
-				var count = 0;
-				for (var item in consumed) {
+				count = 0;
+				for (item in consumed) {
 					consumedItems[item] = 1;
 					++count;
 				}
@@ -61,7 +75,7 @@ function purchasedItem(item) {
 function creditConsumedItem(item, token, receiptString) {
 	try {
 		if (typeof onPurchase === "function" && consumedItems[item]) {
-			if(token && receiptString && receiptString!=="noreceipt")
+			if(token && receiptString && receiptString !== "noreceipt")
 			{
 				onPurchase(item, receiptString, token);
 			}
@@ -104,16 +118,17 @@ function consumePurchasedItem(item, token, receiptString) {
  * Credit all outstanding consumed items.
  */
 function creditAllConsumedItems() {
-	var consumed = [];
+	var consumed = [],
+		item;
 
-	for (var item in consumedItems) {
+	for (item in consumedItems) {
 		if (consumedItems[item]) {
 			consumed.push(item);
 		}
 	}
 
 	for (var ii = 0; ii < consumed.length; ++ii) {
-		var item = consumed[ii];
+		item = consumed[ii];
 
 		creditConsumedItem(item);
 	}
@@ -152,23 +167,7 @@ function simulatePurchase(item, simulate) {
 // Run initialization tasks
 initializeFromLocalStorage();
 
-// Maps of tokens <-> items from market
-var tokenItem = {};
-var itemToken = {};
-
-// Flag: Has read purchases from the market?
-var readPurchases = false;
-
-// Flag: Is market service connected?
-var isConnected = true;
-
-// Flag: Is connected to the Internet?
-var isOnline = navigator.onLine;
-
-// Flag: Is market available?
-var isMarketAvailable = false;
-
-var Billing = Class(Emitter, function (supr) {
+Billing = Class(Emitter, function (supr) {
 	this.init = function() {
 		supr(this, 'init', arguments);
 
@@ -206,7 +205,7 @@ var Billing = Class(Emitter, function (supr) {
 			set: function(f) {
 			},
 			get: function() {
-				return isMarketAvailable == true;
+				return isMarketAvailable === true;
 			}
 		});
 	};
@@ -214,7 +213,7 @@ var Billing = Class(Emitter, function (supr) {
 	this.purchase = simulatePurchase;
 });
 
-var billing = new Billing;
+var billing = new Billing();
 
 function onMarketStateChange() {
 	var available = isConnected && isOnline;
@@ -231,6 +230,20 @@ function onMarketStateChange() {
 		billing.emit("MarketAvailable", available);
 	}
 }
+
+function nativePurchasedItem(sku, token, receiptString) {
+	// Set up map
+	tokenItem[token] = sku;
+	itemToken[sku] = token;
+	// Record purchases
+	purchasedItem(sku);
+	// Attempt to consume it immediately
+	NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
+		token: token,
+		receiptString: (receiptString)?receiptString:"noreceipt"
+	}));
+}
+
 
 // If just simulating native device,
 if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
@@ -272,26 +285,12 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 	// Request initial market state
 	NATIVE.plugins.sendEvent("BillingPlugin", "isConnected", "{}");
 
-	function nativePurchasedItem(sku, token, receiptString) {
-		// Set up map
-		tokenItem[token] = sku;
-		itemToken[sku] = token;
-
-		// Record purchases
-		purchasedItem(sku);
-
-		// Attempt to consume it immediately
-		NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
-			token: token,
-			receiptString: (receiptString)?receiptString:"noreceipt"
-		}));
-	}
-
 	NATIVE.events.registerHandler('billingPurchase', function(evt) {
 		logger.log("Got billingPurchase event:", JSON.stringify(evt));
 
 		// If SKU event,
 		var sku = evt.sku;
+
 		if (!sku || evt.failure) {
 			var failure = evt.failure || "cancel";
 
@@ -307,7 +306,7 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 				}
 				else
 				{
-					nativePurchasedItem(sku, evt.token);	
+					nativePurchasedItem(sku, evt.token);
 				}
 		}
 	});
@@ -317,8 +316,8 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 
 		// NOTE: Function is organized carefully for callback reentrancy
 
-		var token = evt.token;
-		var item = tokenItem[token];
+		var token = evt.token,
+			item = tokenItem[token];
 
 		// If not failed,
 		if (!evt.failure) {
@@ -344,13 +343,15 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 	}, 3000);
 
 	NATIVE.events.registerHandler('billingOwned', function(evt) {
-		logger.log("Got billingOwned event:", JSON.stringify(evt));
+		var skus = evt.skus,
+			tokens = evt.tokens,
+			i;
 
+		logger.log("Got billingOwned event:", JSON.stringify(evt));
 		if (ownedRetryID !== null) {
 			clearTimeout(ownedRetryID);
 			ownedRetryID = null;
 		}
-
 		// If attempt failed,
 		if (evt.failure) {
 			ownedRetryID = setTimeout(function() {
@@ -361,13 +362,10 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 			}, 10000);
 		} else {
 			readPurchases = true;
-
 			// Add owned items
-			var skus = evt.skus;
-			var tokens = evt.tokens;
 			if (skus && skus.length > 0) {
-				for (var ii = 0, len = skus.length; ii < len; ++ii) {
-					nativePurchasedItem(skus[ii], tokens[ii]);
+				for (i = 0, len = skus.length; i < len; ++i) {
+					nativePurchasedItem(skus[i], tokens[i]);
 				}
 			}
 		}
@@ -375,21 +373,17 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 
 	NATIVE.events.registerHandler('billingConnected', function(evt) {
 		logger.log("Got billingConnected event:", JSON.stringify(evt));
-
 		isConnected = evt.connected;
-
 		onMarketStateChange();
 	});
 
 	window.addEventListener("online", function() {
 		isOnline = true;
-
 		onMarketStateChange();
 	});
 
 	window.addEventListener("offline", function() {
 		isOnline = false;
-
 		onMarketStateChange();
 	});
 

@@ -10,6 +10,7 @@ var Billing = Class(Emitter, function (supr) {
 			request_id: item.reciept
 		}, this.callback);
 	};
+
 	this.callback = function (data) {
 		if(data.error_code){
 			if(typeof this.onFailure === 'function'){
@@ -33,7 +34,7 @@ var Billing = Class(Emitter, function (supr) {
 				logger.info("BILLING : < async > onPurchase of Billing plugin is not defined");
 			}
 		}
-	}
+	};
 });
 
 exports = new Billing();
