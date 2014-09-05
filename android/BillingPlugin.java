@@ -87,6 +87,15 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
+	public class InfoEvent extends com.tealeaf.event.Event {
+		Map<String, String> data;
+
+		public InfoEvent(Map<String, String> prices) {
+			super("billingLocalizedPrices");
+			this.data = prices;
+		}
+	}
+
 	public BillingPlugin() {
 	}
 
@@ -150,6 +159,46 @@ public class BillingPlugin implements IPlugin {
 			} else {
 				EventQueue.pushEvent(new ConnectedEvent(true));
 			}
+		}
+	}
+
+	public void requestLocalizedPrices(String jsonData) {
+		try {
+			JSONObject jsonObject = new JSONObject(jsonData);
+			JSONArray skus = jsonObject.getJSONArray("skus");
+			ArrayList<String> skuList = new ArrayList<String> ();
+			int length = skus.length();
+
+			for (int i = 0; i < length; i++) {
+				skuList.add(skus.getString(i));
+			}
+			final Bundle querySkus = new Bundle();
+			querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
+			new Thread() {
+				public void run() {
+					try {
+						Bundle skuDetails = mService.getSkuDetails(3, _ctx.getPackageName(),
+								"inapp", querySkus);
+						Map<String, String> map = new HashMap<String, String>();
+						int response = skuDetails.getInt("RESPONSE_CODE");
+						if (response == 0) {
+							ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
+
+							for (String thisResponse : responseList) {
+								JSONObject object = new JSONObject(thisResponse);
+								map.put(object.getString("productId"), object.getString("price"));
+							}
+							EventQueue.pushEvent(new InfoEvent(map));
+						}
+					} catch(Exception e) {
+						logger.log("{billing} WARNING: Failure in getting data:", e);
+						e.printStackTrace();
+					}
+				}
+			}.start();
+		} catch (Exception e) {
+			logger.log("{billing} WARNING: Failure in parsing JSON :", e);
+			e.printStackTrace();
 		}
 	}
 
