@@ -1,3 +1,5 @@
+import event.Emitter as Emitter;
+
 var Billing = Class(Emitter, function (supr) {
 	this.purchase = function (item) {
 		FB.ui({
@@ -34,4 +36,4 @@ var Billing = Class(Emitter, function (supr) {
 	}
 });
 
-exports = new Billing
+exports = new Billing();
