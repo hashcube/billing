@@ -116,7 +116,7 @@ public class BillingPlugin implements IPlugin {
 					else {
 						if(responseCode.equals("INVALID_SKU"))
 						{
-							logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+							logger.log("{billing} WARNING: Ignored because of invalid SKU", responseCode);
 						} else {
 							logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
 						}
