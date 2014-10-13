@@ -97,29 +97,31 @@ public class BillingPlugin implements IPlugin {
 			logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
+				Receipt receipt = purchaseResponse.getReceipt();
+				String receiptID = receipt.getReceiptId();
 				if (responseCode.equals("SUCCESSFUL"))
 				{
-					Receipt receipt = purchaseResponse.getReceipt();
 					String shortSKU = receipt.getSku();
 					shortSKU = shortSKU.substring(shortSKU.lastIndexOf(".") + 1);
-					logger.log("{billing} Successfully purchased SKU: \""+ shortSKU+ " \"with token: " + receipt.getReceiptId());
-					EventQueue.pushEvent(new PurchaseEvent(shortSKU, receipt.getReceiptId(), null));
-				}
-				else if(responseCode.equals("ALREADY_ENTITLED"))
+					logger.log("{billing} Successfully purchased SKU: \""+ shortSKU+ " \"with token: " + receiptID);
+					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.FULFILLED);
+					EventQueue.pushEvent(new PurchaseEvent(shortSKU, receiptID, null));
+
+				} else if(responseCode.equals("ALREADY_ENTITLED"))
 				{
 					logger.log("{billing} WARNING: Already Entitled to the Goods with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
+					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.FULFILLED);
 				}
-				else if(responseCode.equals("INVALID_SKU"))
-				{
-					logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
+				else {
+					if(responseCode.equals("INVALID_SKU"))
+					{
+						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+					} else {
+						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+					}
+					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.UNAVAILABLE);
 				}
-				else
-				{
-					logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
-				}
+				EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
 			} catch (Exception e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
 				e.printStackTrace();
