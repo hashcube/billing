@@ -118,7 +118,7 @@ public class BillingPlugin implements IPlugin {
 						{
 							logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
 						} else {
-						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+							logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
 						}
 						PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.UNAVAILABLE);
 					}
