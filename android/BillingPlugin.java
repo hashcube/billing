@@ -107,21 +107,23 @@ public class BillingPlugin implements IPlugin {
 					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.FULFILLED);
 					EventQueue.pushEvent(new PurchaseEvent(shortSKU, receiptID, null));
 
-				} else if(responseCode.equals("ALREADY_ENTITLED"))
-				{
-					logger.log("{billing} WARNING: Already Entitled to the Goods with response code:", responseCode);
-					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.FULFILLED);
-				}
-				else {
-					if(responseCode.equals("INVALID_SKU"))
+				} else {
+					if(responseCode.equals("ALREADY_ENTITLED"))
 					{
-						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
-					} else {
-						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+						logger.log("{billing} WARNING: Already Entitled to the Goods with response code:", responseCode);
+						PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.FULFILLED);
 					}
-					PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.UNAVAILABLE);
+					else {
+						if(responseCode.equals("INVALID_SKU"))
+						{
+							logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+						} else {
+						logger.log("{billing} WARNING: Ignored null purchase data with response code:", responseCode);
+						}
+						PurchasingService.notifyFulfillment(receiptID, FulfillmentResult.UNAVAILABLE);
+					}
+					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
 				}
-				EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode));
 			} catch (Exception e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
 				e.printStackTrace();
