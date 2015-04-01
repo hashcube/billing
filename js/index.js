@@ -14,6 +14,7 @@ var purchasedItems = {};
 var consumedItems = {};
 var onPurchase; // callback after consumption
 var onFailure; // callback on purchase failure (not consume fail)
+var simulated_item;
 
 /*
  * Read the list of consumed items during startup.
@@ -63,7 +64,8 @@ function creditConsumedItem(item, token, receiptString) {
 		if (typeof onPurchase === "function" && consumedItems[item]) {
 			if(token && receiptString && receiptString!=="noreceipt")
 			{
-				onPurchase(item, receiptString, token);
+				onPurchase(item === 'android.test.purchased' ? simulated_item : item, receiptString, token);
+				simulated_item = null;
 			}
 			else
 			{
@@ -248,7 +250,13 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
 	// Override purchase function to hook into native
 	Billing.prototype.purchase = function(item, simulate) {
 		if (simulate) {
-			if (simulate == "simulate") {
+			if (device.isIPhone || device.isIPad)
+			{
+				simulatePurchase(item, simulate);
+			}
+			else if (simulate == "simulate")
+			{
+				simulated_item = item;
 				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
 					"sku": "android.test.purchased"
 				}));
