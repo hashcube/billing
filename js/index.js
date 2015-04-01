@@ -254,7 +254,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
 			{
 				simulatePurchase(item, simulate);
 			}
-			else if (simulate == "simulate") {
+			else if (simulate == "simulate")
+			{
 				simulated_item = item;
 				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
 					"sku": "android.test.purchased"
