@@ -1,0 +1,13 @@
+{
+  "name": "billing",
+  "version": "1.0.0",
+  "devkit": {
+    "clientPaths": {
+      "billing": "js"
+    },
+    "extensions": {
+      "android": "android"
+    }
+  }
+}
+
