@@ -58,10 +58,11 @@ function purchasedItem(item) {
  * Attempt to credit a player for their consumed item, and remove it from the
  * consumed items list in local storage on success.
  */
-function creditConsumedItem(item, token) {
+function creditConsumedItem(item, token, userid) {
 	try {
 		if (typeof onPurchase === "function" && consumedItems[item]) {
-			onPurchase(item, token, "");
+                        token = {'token': token, 'userid': userid};
+			onPurchase(item, JSON.stringify(token), "");
 			
                         delete consumedItems[item];
 			localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
@@ -77,7 +78,7 @@ function creditConsumedItem(item, token) {
  * Move an item from the purchased list to the consumed list and update
  * local storage so that it does not get lost.
  */
-function consumePurchasedItem(item, token) {
+function consumePurchasedItem(item, token, userid) {
 	try {
 		if (purchasedItems[item]) {
 			delete purchasedItems[item];
@@ -86,7 +87,7 @@ function consumePurchasedItem(item, token) {
 			localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
 
 			logger.log("Successfully consumed purchased item:", item);
-			creditConsumedItem(item, token);
+			creditConsumedItem(item, token, userid);
 		}
 	} catch (e) {
 		logger.log("Crediting purchase failed with error:", e);
@@ -312,10 +313,11 @@ if (!GLOBAL.NATIVE || device.simulatingMobileNative) {
 
 		var token = evt.token;
 		var item = tokenItem[token];
+                var userid = evt.userid;
 
 		// If not failed,
 		if (!evt.failure) {
-			consumePurchasedItem(item, token);
+			consumePurchasedItem(item, token, userid);
 		} else {
 			logger.log("Failed to consume token", token, "for item", item, "and will retry in 3 seconds...");
 
