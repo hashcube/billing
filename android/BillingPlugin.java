@@ -53,8 +53,8 @@ public class BillingPlugin implements IPlugin {
 	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
-        String currentUserId;
-        String currentMarketPlace; 
+        String currentUserId = null;
+        String currentMarketPlace = null;
 
 	private class MyListener implements PurchasingListener {
 
@@ -165,7 +165,7 @@ public class BillingPlugin implements IPlugin {
 			super("billingConsume");
 			this.token = token;
 			this.failure = failure;
-                        this.userid = userid;
+			this.userid = userid;
 		}
 	}
 
