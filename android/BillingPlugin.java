@@ -53,8 +53,8 @@ public class BillingPlugin implements IPlugin {
 	private DeviceType deviceIs = DeviceType.KINDLE;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
-        String currentUserId = null;
-        String currentMarketPlace = null;
+	String currentUserId = null;
+	String currentMarketPlace = null;
 
 	private class MyListener implements PurchasingListener {
 
@@ -87,21 +87,21 @@ public class BillingPlugin implements IPlugin {
 
 		@Override
 		public void onUserDataResponse(UserDataResponse response) {
-                  final UserDataResponse.RequestStatus status = response.getRequestStatus();
- 		  switch (status) {
- 		    case SUCCESSFUL:
- 		      currentUserId = response.getUserData().getUserId();
- 		      currentMarketPlace = response.getUserData().getMarketplace();
-		      logger.log("{BillingAmazon}", String.format("User: %s market: %s\n", currentUserId, currentMarketPlace));
- 		      break ;
- 		 
- 		    case FAILED:
-		      logger.log("{BillingAmazon}", "Failed to fetch user data");
- 		    case NOT_SUPPORTED:
-		      logger.log("{BillingAmazon}", "This call is not supported");
- 		      break ;
- 		  }
-                }
+			final UserDataResponse.RequestStatus status = response.getRequestStatus();
+			switch (status) {
+				case SUCCESSFUL:
+					currentUserId = response.getUserData().getUserId();
+					currentMarketPlace = response.getUserData().getMarketplace();
+					logger.log("{BillingAmazon}", String.format("User: %s market: %s\n", currentUserId, currentMarketPlace));
+					break ;
+
+				case FAILED:
+					logger.log("{BillingAmazon}", "Failed to fetch user data");
+				case NOT_SUPPORTED:
+    					logger.log("{BillingAmazon}", "This call is not supported");
+					break ;
+			}
+		}
 
 		@Override
 		public void onPurchaseUpdatesResponse(PurchaseUpdatesResponse purchaseUpdatesResponse) {}
@@ -159,7 +159,7 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public class ConsumeEvent extends com.tealeaf.event.Event {
-		String token, failure, userid=currentUserId;
+		String token, failure, userid = currentUserId;
 
 		public ConsumeEvent(String token, String failure) {
 			super("billingConsume");
@@ -233,8 +233,8 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onResume() {
-	  PurchasingService.getUserData();
-        }
+		PurchasingService.getUserData();
+	}
 
 	public void onStart() {
 		final PackageManager packageManager = _ctx.getPackageManager();
