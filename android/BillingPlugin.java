@@ -136,7 +136,6 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onResume() {
-		in_progress = false;
 	}
 
 	public void onStart() {
@@ -418,7 +417,6 @@ public class BillingPlugin implements IPlugin {
 				String responseCode = this.getResponseCode(data);
 
 				if (purchaseData == null) {
-
 					in_progress = false;
 					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
 					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
@@ -429,28 +427,22 @@ public class BillingPlugin implements IPlugin {
 					if (sku == null) {
 						logger.log("{billing} WARNING: Malformed purchase json");
 					} else {
+						in_progress = false;
 						switch (resultCode) {
 							case Activity.RESULT_OK:
 								String token = jo.getString("purchaseToken");
-
 								logger.log("{billing} Successfully purchased SKU:", sku);
 								JSONObject receiptStringCombo = new JSONObject();
 								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
 								receiptStringCombo.put("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"));
-
-								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 								break;
 							case Activity.RESULT_CANCELED:
 								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-
-								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 								break;
 							default:
 								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-
-								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 						}
 					}
