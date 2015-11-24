@@ -42,6 +42,7 @@ public class BillingPlugin implements IPlugin {
 	ServiceConnection mServiceConn = null;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
+	static private boolean in_progress = false;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -113,7 +114,7 @@ public class BillingPlugin implements IPlugin {
 				}
 
 			@Override
-				public void onServiceConnected(ComponentName name, 
+				public void onServiceConnected(ComponentName name,
 						IBinder service) {
 					synchronized (mServiceLock) {
 						mService = IInAppBillingService.Stub.asInterface(service);
@@ -129,7 +130,7 @@ public class BillingPlugin implements IPlugin {
 
 		_activity = activity;
 
-		_ctx.bindService(new 
+		_ctx.bindService(new
 				Intent("com.android.vending.billing.InAppBillingService.BIND"),
 				mServiceConn, Context.BIND_AUTO_CREATE);
 	}
@@ -212,10 +213,14 @@ public class BillingPlugin implements IPlugin {
 
 			logger.log("{billing} Purchasing:", sku);
 
+
+			in_progress = true;
 			Bundle buyIntentBundle = null;
 
 			synchronized (mServiceLock) {
 				if (mService == null) {
+
+					in_progress = false;
 					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service", null));
 					return;
 				}
@@ -243,10 +248,14 @@ public class BillingPlugin implements IPlugin {
 			}
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in purchase:", e);
+
+			in_progress = false;
 			e.printStackTrace();
 		}
 
 		if (!success && sku != null) {
+
+			in_progress = false;
 			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed", null));
 		}
 	}
@@ -331,13 +340,13 @@ public class BillingPlugin implements IPlugin {
 				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
 				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 			} else {
-				ArrayList ownedSkus = 
+				ArrayList ownedSkus =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-				ArrayList purchaseDataList = 
+				ArrayList purchaseDataList =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-				//ArrayList signatureList = 
+				//ArrayList signatureList =
 				//	ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
-				//String continuationToken = 
+				//String continuationToken =
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
@@ -355,7 +364,7 @@ public class BillingPlugin implements IPlugin {
 						skus.add(sku);
 						tokens.add(token);
 					}
-				} 
+				}
 
 				// TODO: Use continuationToken to retrieve > 700 items
 
@@ -408,6 +417,7 @@ public class BillingPlugin implements IPlugin {
 				String responseCode = this.getResponseCode(data);
 
 				if (purchaseData == null) {
+					in_progress = false;
 					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
 					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
 				} else {
@@ -417,10 +427,10 @@ public class BillingPlugin implements IPlugin {
 					if (sku == null) {
 						logger.log("{billing} WARNING: Malformed purchase json");
 					} else {
+						in_progress = false;
 						switch (resultCode) {
 							case Activity.RESULT_OK:
 								String token = jo.getString("purchaseToken");
-
 								logger.log("{billing} Successfully purchased SKU:", sku);
 								JSONObject receiptStringCombo = new JSONObject();
 								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
@@ -440,12 +450,21 @@ public class BillingPlugin implements IPlugin {
 			} catch (JSONException e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
 				e.printStackTrace();
+
+				in_progress = false;
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 			}
 		}
 	}
 
 	public void onNewIntent(Intent intent) {
+		// Store process is closed onNewIntent but we need to send
+		// failure event as well to prevent game from waiting
+
+		if (in_progress) {
+			in_progress = false;
+			EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+		}
 	}
 
 	public void setInstallReferrer(String referrer) {
