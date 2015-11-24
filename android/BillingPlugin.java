@@ -458,6 +458,9 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onNewIntent(Intent intent) {
+		// Store process is closed onNewIntent but we need to send
+		// failure event as well to prevent game from waiting
+
 		if (in_progress) {
 			in_progress = false;
 			EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
