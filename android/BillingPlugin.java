@@ -42,6 +42,7 @@ public class BillingPlugin implements IPlugin {
 	ServiceConnection mServiceConn = null;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
+	static private boolean in_progress = false;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -135,6 +136,7 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onResume() {
+		in_progress = false;
 	}
 
 	public void onStart() {
@@ -212,10 +214,14 @@ public class BillingPlugin implements IPlugin {
 
 			logger.log("{billing} Purchasing:", sku);
 
+
+			in_progress = true;
 			Bundle buyIntentBundle = null;
 
 			synchronized (mServiceLock) {
 				if (mService == null) {
+
+					in_progress = false;
 					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service", null));
 					return;
 				}
@@ -243,10 +249,14 @@ public class BillingPlugin implements IPlugin {
 			}
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in purchase:", e);
+
+			in_progress = false;
 			e.printStackTrace();
 		}
 
 		if (!success && sku != null) {
+
+			in_progress = false;
 			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed", null));
 		}
 	}
@@ -408,6 +418,8 @@ public class BillingPlugin implements IPlugin {
 				String responseCode = this.getResponseCode(data);
 
 				if (purchaseData == null) {
+
+					in_progress = false;
 					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
 					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
 				} else {
@@ -425,14 +437,20 @@ public class BillingPlugin implements IPlugin {
 								JSONObject receiptStringCombo = new JSONObject();
 								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
 								receiptStringCombo.put("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"));
+
+								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 								break;
 							case Activity.RESULT_CANCELED:
 								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+
+								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 								break;
 							default:
 								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
+
+								in_progress = false;
 								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
 						}
 					}
@@ -440,13 +458,18 @@ public class BillingPlugin implements IPlugin {
 			} catch (JSONException e) {
 				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
 				e.printStackTrace();
+
+				in_progress = false;
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 			}
 		}
 	}
 
 	public void onNewIntent(Intent intent) {
-		EventQueue.pushEvent(new PurchaseEvent("reset", null, "failed", null));
+		if (in_progress) {
+			in_progress = false;
+			EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+		}
 	}
 
 	public void setInstallReferrer(String referrer) {
