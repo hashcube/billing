@@ -113,7 +113,7 @@ public class BillingPlugin implements IPlugin {
 				}
 
 			@Override
-				public void onServiceConnected(ComponentName name, 
+				public void onServiceConnected(ComponentName name,
 						IBinder service) {
 					synchronized (mServiceLock) {
 						mService = IInAppBillingService.Stub.asInterface(service);
@@ -129,7 +129,7 @@ public class BillingPlugin implements IPlugin {
 
 		_activity = activity;
 
-		_ctx.bindService(new 
+		_ctx.bindService(new
 				Intent("com.android.vending.billing.InAppBillingService.BIND"),
 				mServiceConn, Context.BIND_AUTO_CREATE);
 	}
@@ -331,13 +331,13 @@ public class BillingPlugin implements IPlugin {
 				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
 				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 			} else {
-				ArrayList ownedSkus = 
+				ArrayList ownedSkus =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-				ArrayList purchaseDataList = 
+				ArrayList purchaseDataList =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-				//ArrayList signatureList = 
+				//ArrayList signatureList =
 				//	ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
-				//String continuationToken = 
+				//String continuationToken =
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
@@ -355,7 +355,7 @@ public class BillingPlugin implements IPlugin {
 						skus.add(sku);
 						tokens.add(token);
 					}
-				} 
+				}
 
 				// TODO: Use continuationToken to retrieve > 700 items
 
@@ -446,6 +446,7 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onNewIntent(Intent intent) {
+		EventQueue.pushEvent(new PurchaseEvent("reset", null, "failed", null));
 	}
 
 	public void setInstallReferrer(String referrer) {
