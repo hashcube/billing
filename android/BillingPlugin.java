@@ -341,7 +341,6 @@ public class BillingPlugin implements IPlugin {
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
-					in_progress = false;
 					//String signature = signatureList.get(i);
 					String sku = (String)ownedSkus.get(i);
 					String purchaseData = (String)purchaseDataList.get(i);
@@ -359,6 +358,7 @@ public class BillingPlugin implements IPlugin {
 				} 
 
 				// TODO: Use continuationToken to retrieve > 700 items
+
 				EventQueue.pushEvent(new OwnedEvent(skus, tokens, null));
 			}
 		} catch (Exception e) {
@@ -446,7 +446,6 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onNewIntent(Intent intent) {
-		getPurchases("{}");
 	}
 
 	public void setInstallReferrer(String referrer) {
