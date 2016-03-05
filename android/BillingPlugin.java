@@ -241,6 +241,10 @@ public class BillingPlugin implements IPlugin {
 					success = true;
 				}
 			} else if (getPurchases("{}")) {
+				// When we try to purchase, if reponse code from the store is not success,
+				// try checking pending purchases.
+				// This is a temporary fix to avoid the condition where creating a new intent
+				// breaks the purchase flow.
 				success = true;
 			}
 		} catch (Exception e) {
@@ -401,6 +405,8 @@ public class BillingPlugin implements IPlugin {
 
 	public void onActivityResult(Integer request, Integer resultCode, Intent data) {
 		if (data == null) {
+			// If there is any onwned purchases, don't send failed event.
+			// We assume that last purchase is the one pending.
 			if (!getPurchases("{}")) {
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 				return;
