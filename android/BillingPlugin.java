@@ -42,7 +42,6 @@ public class BillingPlugin implements IPlugin {
 	ServiceConnection mServiceConn = null;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
-	static private boolean in_progress = false;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -213,14 +212,10 @@ public class BillingPlugin implements IPlugin {
 
 			logger.log("{billing} Purchasing:", sku);
 
-
-			in_progress = true;
 			Bundle buyIntentBundle = null;
 
 			synchronized (mServiceLock) {
 				if (mService == null) {
-
-					in_progress = false;
 					EventQueue.pushEvent(new PurchaseEvent(sku, null, "service", null));
 					return;
 				}
@@ -232,9 +227,9 @@ public class BillingPlugin implements IPlugin {
 			}
 
 			// If unable to create bundle,
-			if (buyIntentBundle == null || buyIntentBundle.getInt("RESPONSE_CODE", 1) != 0) {
+			if (buyIntentBundle == null) {
 				logger.log("{billing} WARNING: Unable to create intent bundle for sku", sku);
-			} else {
+			} else if (buyIntentBundle.getInt("RESPONSE_CODE", 1) == 0) {
 				PendingIntent pendingIntent = buyIntentBundle.getParcelable("BUY_INTENT");
 
 				if (pendingIntent == null) {
@@ -245,17 +240,19 @@ public class BillingPlugin implements IPlugin {
 							Integer.valueOf(0), Integer.valueOf(0));
 					success = true;
 				}
+			} else if (getPurchases("{}")) {
+				// When we try to purchase, if reponse code from the store is not success,
+				// try checking pending purchases.
+				// This is a temporary fix to avoid the condition where creating a new intent
+				// breaks the purchase flow.
+				success = true;
 			}
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in purchase:", e);
-
-			in_progress = false;
 			e.printStackTrace();
 		}
 
 		if (!success && sku != null) {
-
-			in_progress = false;
 			EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed", null));
 		}
 	}
@@ -315,7 +312,7 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
-	public void getPurchases(String jsonData) {
+	public boolean getPurchases(String jsonData) {
 		ArrayList<String> skus = new ArrayList<String>();
 		ArrayList<String> tokens = new ArrayList<String>();
 		boolean success = false;
@@ -328,7 +325,7 @@ public class BillingPlugin implements IPlugin {
 			synchronized (mServiceLock) {
 				if (mService == null) {
 					EventQueue.pushEvent(new OwnedEvent(null, null, "service"));
-					return;
+					return success;
 				}
 
 				ownedItems = mService.getPurchases(3, _ctx.getPackageName(), "inapp", null);
@@ -350,6 +347,7 @@ public class BillingPlugin implements IPlugin {
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
+					success = true;
 					//String signature = signatureList.get(i);
 					String sku = (String)ownedSkus.get(i);
 					String purchaseData = (String)purchaseDataList.get(i);
@@ -375,96 +373,77 @@ public class BillingPlugin implements IPlugin {
 			e.printStackTrace();
 			EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 		}
+		return success;
 	}
 
 	private String getResponseCode(Intent data) {
-		try {
-			Bundle bundle = data.getExtras();
+		int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
 
-			int responseCode = bundle.getInt("RESPONSE_CODE");
-
-			switch (responseCode) {
-				case 0:
-					return "ok";
-				case 1:
-					return "cancel";
-				case 2:
-					return "service";
-				case 3:
-					return "billing unavailable";
-				case 4:
-					return "item unavailable";
-				case 5:
-					return "invalid arguments provided to API";
-				case 6:
-					return "fatal error in API";
-				case 7:
-					return "already owned";
-				case 8:
-					return "item not owned";
-			}
-		} catch (Exception e) {
-		}
+		switch (responseCode) {
+			case 0:
+				return "ok";
+			case 1:
+				return "cancel";
+			case 2:
+				return "service";
+			case 3:
+				return "billing unavailable";
+			case 4:
+				return "item unavailable";
+			case 5:
+				return "invalid arguments provided to API";
+			case 6:
+				return "fatal error in API";
+			case 7:
+				return "already owned";
+			case 8:
+				return "item not owned";
+        }
 
 		return "unknown error";
 	}
 
 	public void onActivityResult(Integer request, Integer resultCode, Intent data) {
+		if (data == null) {
+			// If there is any onwned purchases, don't send failed event.
+			// We assume that last purchase is the one pending.
+			if (!getPurchases("{}")) {
+				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+				return;
+			}
+		}
+
 		if (request == BUY_REQUEST_CODE) {
-			try {
-				String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-				String sku = null;
-				String responseCode = this.getResponseCode(data);
+			String responseCode = this.getResponseCode(data);
+			String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
+			String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
 
-				if (purchaseData == null) {
-					in_progress = false;
-					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
-				} else {
+			logger.log("{billing} responsecode", responseCode);
+
+			if (resultCode == Activity.RESULT_OK) {
+				logger.log("{billing} purchase data", purchaseData);
+
+				try {
 					JSONObject jo = new JSONObject(purchaseData);
-					sku = jo.getString("productId");
+					String sku = jo.getString("productId");
+					String token = jo.getString("purchaseToken");
 
-					if (sku == null) {
-						logger.log("{billing} WARNING: Malformed purchase json");
-					} else {
-						in_progress = false;
-						switch (resultCode) {
-							case Activity.RESULT_OK:
-								String token = jo.getString("purchaseToken");
-								logger.log("{billing} Successfully purchased SKU:", sku);
-								JSONObject receiptStringCombo = new JSONObject();
-								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
-								receiptStringCombo.put("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"));
-								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
-								break;
-							case Activity.RESULT_CANCELED:
-								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
-								break;
-							default:
-								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
-						}
-					}
+					JSONObject receiptStringCombo = new JSONObject();
+					receiptStringCombo.put("purchaseData", purchaseData);
+					receiptStringCombo.put("dataSignature", dataSignature);
+					EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
 				}
-			} catch (JSONException e) {
-				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
-				e.printStackTrace();
-
-				in_progress = false;
+				catch (JSONException e) {
+					e.printStackTrace();
+					EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+				}
+			} else {
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 			}
 		}
 	}
 
 	public void onNewIntent(Intent intent) {
-		// Store process is closed onNewIntent but we need to send
-		// failure event as well to prevent game from waiting
-
-		if (in_progress) {
-			in_progress = false;
-			EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
-		}
 	}
 
 	public void setInstallReferrer(String referrer) {
