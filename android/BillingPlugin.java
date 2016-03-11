@@ -417,7 +417,7 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
-	public void getPurchaseRequestStatus(String jsonData) {
+	public void getPurchases(String jsonData) {
 		ArrayList<String> skus = new ArrayList<String>();
 		ArrayList<String> tokens = new ArrayList<String>();
 		boolean success = false;
