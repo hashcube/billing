@@ -146,6 +146,15 @@ public class BillingPlugin implements IPlugin {
 	public void onStop() {
 	}
 
+	public void onFirstRun() {
+	}
+
+	public void onRenderPause() {
+	}
+
+	public void onRenderResume() {
+	}
+
 	public void onDestroy() {
 		if (mServiceConn != null) {
 			_ctx.unbindService(mServiceConn);
