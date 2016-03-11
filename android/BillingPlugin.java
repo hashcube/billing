@@ -114,6 +114,11 @@ public class BillingPlugin implements IPlugin {
 			logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
+				if(responseCode == "FAILED")
+				{
+					EventQueue.pushEvent(new PurchaseEvent(null, null, "cancel"));
+					return;
+				}
 				Receipt receipt = purchaseResponse.getReceipt();
 				String receiptID = receipt.getReceiptId();
 				if (responseCode.equals("SUCCESSFUL"))
@@ -412,7 +417,7 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
-	public void getPurchases(String jsonData) {
+	public void getPurchaseRequestStatus(String jsonData) {
 		ArrayList<String> skus = new ArrayList<String>();
 		ArrayList<String> tokens = new ArrayList<String>();
 		boolean success = false;
