@@ -114,6 +114,10 @@ public class BillingPlugin implements IPlugin {
 			logger.log("{billing} Entering Amazon Kindle Billing Plugin Handler");
 			try {
 				String responseCode = purchaseResponse.getRequestStatus().toString();
+				if(responseCode.equals("FAILED")) {
+					EventQueue.pushEvent(new PurchaseEvent(null, null, "cancel"));
+					return;
+				}
 				Receipt receipt = purchaseResponse.getReceipt();
 				String receiptID = receipt.getReceiptId();
 				if (responseCode.equals("SUCCESSFUL"))
