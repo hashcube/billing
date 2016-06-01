@@ -274,7 +274,6 @@ public class BillingPlugin implements IPlugin {
 			android.util.Log.d("EXCEPTION", "" + e.getMessage());
 		}
 
-
 		Intent serviceIntent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
 		serviceIntent.setPackage("com.android.vending");
 		_ctx.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
@@ -329,6 +328,7 @@ public class BillingPlugin implements IPlugin {
 			}
 			final Bundle querySkus = new Bundle();
 			querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
+			// TODO: Add client side verification with signatures
 			new Thread() {
 				public void run() {
 					try {
@@ -480,7 +480,6 @@ public class BillingPlugin implements IPlugin {
 					String token = json.getString("purchaseToken");
 
 					// TODO: Provide purchase data
-					// TODO: Verify signatures
 
 					if (sku != null && token != null) {
 						skus.add(sku);
