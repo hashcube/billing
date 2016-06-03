@@ -224,9 +224,21 @@ billing.purchase("fiveCoins");
 
 ##### Simulation Mode
 
-To test purchases without hitting the market, pass a second parameter of "simulate" or "cancel".  On browser builds or in the web simulator, purchases will always simulate success otherwise.
+To test purchases without hitting the market, pass a second parameter of "simulate" or "cancel". On browser builds or in the web simulator, purchases will always simulate success otherwise.
 
 ~~~
 billing.purchase("fiveCoins", "simulate"); // Simulates success
 billing.purchase("fiveCoins", "cancel"); // Simulates failure "cancel"
 ~~~
+
+### Additional steps for android setup
+billingSignature is the the base64 encoded signature for your app. It has to configured in the manifest.json under the android section. Eg
+
+~~~
+android: {
+  billingSignature: "ABCD",
+}
+~~~
+
+The base64 encoded signature can be found under Your App Name -> Services & APIs -> Your license key for this application
+This is useful for verifying IAP on the client
