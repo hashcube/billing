@@ -4,20 +4,18 @@ The billing plugin supports in-app purchases from the Google Play Store on Andro
 
 ## Installation
 
-Install the billing plugin by running `basil install billing`.
-
-Include it in the `manifest.json` file under the "addons" section for your game:
+Include it in the `manifest.json` file under the "dependencies" section for your game:
 
 ~~~
-"addons": [
-	"billing"
-],
+"dependencies": {
+	"billing": "https://github.com/hashcube/billing.git#master"
+},
 ~~~
 
 You can import the billing object anywhere in your application:
 
 ~~~
-import plugins.billing.billing as billing;
+import billing as billing;
 ~~~
 
 
@@ -30,6 +28,16 @@ The store item Product IDs must be prefixed with your bundleID (as in "com.games
 All store items should be set up as Consumable.
 
 After building your game, you will need to turn on the IAP entitlement.  This can be done by selecting your project, choosing the "Capabilities" tab, and turning on the In-App Purchase entitlement.  You will be prompted to log in to your development team.
+
+### Amazon Setup
+
+Point the module to `amazon` branch. Everything else should work the same way as Android.
+
+~~~
+"dependencies": [
+	"billing": "https://github.com/hashcube/billing.git#amazon"
+],
+~~~
 
 ## Handling Purchases
 
