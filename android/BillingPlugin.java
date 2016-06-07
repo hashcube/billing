@@ -18,8 +18,6 @@ import java.util.Iterator;
 
 import com.tealeaf.plugin.IPlugin;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
 import android.content.Intent;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -33,6 +31,19 @@ import android.app.PendingIntent;
 import com.tealeaf.EventQueue;
 import com.tealeaf.event.*;
 
+// Security
+import android.util.Base64;
+import android.text.TextUtils;
+
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+
 import com.android.vending.billing.IInAppBillingService;
 
 public class BillingPlugin implements IPlugin {
@@ -42,6 +53,7 @@ public class BillingPlugin implements IPlugin {
 	ServiceConnection mServiceConn = null;
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 123450;
+	private String mSignature;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -96,6 +108,129 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
+	public static class Security {
+
+		private static final String KEY_FACTORY_ALGORITHM = "RSA";
+		private static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
+
+		/**
+		 * Verifies that the data was signed with the given signature, and returns
+		 * the verified purchase. The data is in JSON format and signed
+		 * with a private key. The data also contains the {@link PurchaseState}
+		 * and product ID of the purchase.
+		 * @param base64PublicKey the base64-encoded public key to use for verifying.
+		 * @param signedData the signed JSON string (signed, not encrypted)
+		 * @param signature the signature for the data, signed with the private key
+		 */
+		public static boolean verifyPurchase(String base64PublicKey, String signedData, String signature) {
+			PublicKey key;
+
+			if (TextUtils.isEmpty(signedData) || TextUtils.isEmpty(base64PublicKey) ||
+					TextUtils.isEmpty(signature)) {
+				logger.log("{billing} Purchase verification failed: missing data.");
+				return false;
+			}
+
+			try {
+				key = Security.generatePublicKey(base64PublicKey);
+			} catch(Exception e) {
+				return false;
+			}
+			return Security.verify(key, signedData, signature);
+		}
+
+		/**
+		 * Generates a PublicKey instance from a string containing the
+		 * Base64-encoded public key.
+		 *
+		 * @param encodedPublicKey Base64-encoded public key
+		 * @throws IllegalArgumentException if encodedPublicKey is invalid
+		 */
+		public static PublicKey generatePublicKey(String encodedPublicKey) {
+			try {
+				byte[] decodedKey = Base64.decode(encodedPublicKey, Base64.DEFAULT);
+				KeyFactory keyFactory = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
+				return keyFactory.generatePublic(new X509EncodedKeySpec(decodedKey));
+			} catch (NoSuchAlgorithmException e) {
+				throw new RuntimeException(e);
+			} catch (InvalidKeySpecException e) {
+				logger.log("{billing} Invalid key specification.");
+				throw new IllegalArgumentException(e);
+			}
+		}
+
+		/**
+		 * Verifies that the signature from the server matches the computed
+		 * signature on the data.  Returns true if the data is correctly signed.
+		 *
+		 * @param publicKey public key associated with the developer account
+		 * @param signedData signed data from server
+		 * @param signature server signature
+		 * @return true if the data and signature match
+		 */
+		public static boolean verify(PublicKey publicKey, String signedData, String signature) {
+			byte[] signatureBytes;
+			try {
+				signatureBytes = Base64.decode(signature, Base64.DEFAULT);
+			} catch (IllegalArgumentException e) {
+				logger.log("{billing} Base64 decoding failed.");
+				return false;
+			}
+			try {
+				Signature sig = Signature.getInstance(SIGNATURE_ALGORITHM);
+				sig.initVerify(publicKey);
+				sig.update(signedData.getBytes());
+				if (!sig.verify(signatureBytes)) {
+					logger.log("{billing} Signature verification failed.");
+					return false;
+				}
+				return true;
+			} catch (NoSuchAlgorithmException e) {
+				logger.log("{billing} NoSuchAlgorithmException.");
+			} catch (InvalidKeyException e) {
+				logger.log("{billing} Invalid key specification.");
+			} catch (SignatureException e) {
+				logger.log("{billing} Signature exception.");
+			}
+			return false;
+		}
+	}
+
+	private void consumeAsync(final String TOKEN, final String RECEIPT) {
+		logger.log("{billing} Consuming:", TOKEN);
+
+		new Thread() {
+			public void run() {
+				try {
+					logger.log("{billing} Consuming from thread:", TOKEN);
+
+					int response = 1;
+
+					synchronized (mServiceLock) {
+						if (mService == null) {
+							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service", null));
+							return;
+						}
+
+						response = mService.consumePurchase(3, _ctx.getPackageName(), TOKEN);
+					}
+
+					if (response != 0) {
+						logger.log("{billing} Consume failed:", TOKEN, "for reason:", response);
+						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel", null));
+					} else {
+						logger.log("{billing} Consume suceeded:", TOKEN);
+						EventQueue.pushEvent(new ConsumeEvent(TOKEN, null, RECEIPT));
+					}
+				} catch (Exception e) {
+					logger.log("{billing} WARNING: Failure in consume:", e);
+					e.printStackTrace();
+					EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed", null));
+				}
+			}
+		}.start();
+	}
+
 	public BillingPlugin() {
 	}
 
@@ -113,7 +248,7 @@ public class BillingPlugin implements IPlugin {
 				}
 
 			@Override
-				public void onServiceConnected(ComponentName name, 
+				public void onServiceConnected(ComponentName name,
 						IBinder service) {
 					synchronized (mServiceLock) {
 						mService = IInAppBillingService.Stub.asInterface(service);
@@ -129,9 +264,19 @@ public class BillingPlugin implements IPlugin {
 
 		_activity = activity;
 
-		_ctx.bindService(new 
-				Intent("com.android.vending.billing.InAppBillingService.BIND"),
-				mServiceConn, Context.BIND_AUTO_CREATE);
+		PackageManager manager = activity.getPackageManager();
+		try {
+			Bundle meta = manager.getApplicationInfo(activity.getPackageName(), PackageManager.GET_META_DATA).metaData;
+			if (meta != null) {
+				mSignature = meta.get("BILLING_SIGNATURE").toString();
+			}
+		} catch (Exception e) {
+			android.util.Log.d("EXCEPTION", "" + e.getMessage());
+		}
+
+		Intent serviceIntent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
+		serviceIntent.setPackage("com.android.vending");
+		_ctx.bindService(serviceIntent, mServiceConn, Context.BIND_AUTO_CREATE);
 	}
 
 	public void onResume() {
@@ -144,6 +289,15 @@ public class BillingPlugin implements IPlugin {
 	}
 
 	public void onStop() {
+	}
+
+	public void onFirstRun() {
+	}
+
+	public void onRenderPause() {
+	}
+
+	public void onRenderResume() {
 	}
 
 	public void onDestroy() {
@@ -174,6 +328,7 @@ public class BillingPlugin implements IPlugin {
 			}
 			final Bundle querySkus = new Bundle();
 			querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
+			// TODO: Add client side verification with signatures
 			new Thread() {
 				public void run() {
 					try {
@@ -227,9 +382,9 @@ public class BillingPlugin implements IPlugin {
 			}
 
 			// If unable to create bundle,
-			if (buyIntentBundle == null || buyIntentBundle.getInt("RESPONSE_CODE", 1) != 0) {
+			if (buyIntentBundle == null) {
 				logger.log("{billing} WARNING: Unable to create intent bundle for sku", sku);
-			} else {
+			} else if (buyIntentBundle.getInt("RESPONSE_CODE", 1) == 0) {
 				PendingIntent pendingIntent = buyIntentBundle.getParcelable("BUY_INTENT");
 
 				if (pendingIntent == null) {
@@ -240,6 +395,12 @@ public class BillingPlugin implements IPlugin {
 							Integer.valueOf(0), Integer.valueOf(0));
 					success = true;
 				}
+			} else if (getPurchases("{}")) {
+				// When we try to purchase, if reponse code from the store is not success,
+				// try checking pending purchases.
+				// This is a temporary fix to avoid the condition where creating a new intent
+				// breaks the purchase flow.
+				success = true;
 			}
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in purchase:", e);
@@ -267,38 +428,7 @@ public class BillingPlugin implements IPlugin {
 				}
 			}
 
-			logger.log("{billing} Consuming:", TOKEN);
-
-			new Thread() {
-				public void run() {
-					try {
-						logger.log("{billing} Consuming from thread:", TOKEN);
-
-						int response = 1;
-
-						synchronized (mServiceLock) {
-							if (mService == null) {
-								EventQueue.pushEvent(new ConsumeEvent(TOKEN, "service", null));
-								return;
-							}
-
-							response = mService.consumePurchase(3, _ctx.getPackageName(), TOKEN);
-						}
-
-						if (response != 0) {
-							logger.log("{billing} Consume failed:", TOKEN, "for reason:", response);
-							EventQueue.pushEvent(new ConsumeEvent(TOKEN, "cancel", null));
-						} else {
-							logger.log("{billing} Consume suceeded:", TOKEN);
-							EventQueue.pushEvent(new ConsumeEvent(TOKEN, null, RECEIPT));
-						}
-					} catch (Exception e) {
-						logger.log("{billing} WARNING: Failure in consume:", e);
-						e.printStackTrace();
-						EventQueue.pushEvent(new ConsumeEvent(TOKEN, "failed", null));
-					}
-				}
-			}.start();
+			consumeAsync(TOKEN, RECEIPT);
 		} catch (Exception e) {
 			logger.log("{billing} WARNING: Failure in consume:", e);
 			e.printStackTrace();
@@ -306,7 +436,7 @@ public class BillingPlugin implements IPlugin {
 		}
 	}
 
-	public void getPurchases(String jsonData) {
+	public boolean getPurchases(String jsonData) {
 		ArrayList<String> skus = new ArrayList<String>();
 		ArrayList<String> tokens = new ArrayList<String>();
 		boolean success = false;
@@ -319,7 +449,7 @@ public class BillingPlugin implements IPlugin {
 			synchronized (mServiceLock) {
 				if (mService == null) {
 					EventQueue.pushEvent(new OwnedEvent(null, null, "service"));
-					return;
+					return success;
 				}
 
 				ownedItems = mService.getPurchases(3, _ctx.getPackageName(), "inapp", null);
@@ -331,16 +461,17 @@ public class BillingPlugin implements IPlugin {
 				logger.log("{billing} WARNING: Failure to create owned items bundle:", responseCode);
 				EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 			} else {
-				ArrayList ownedSkus = 
+				ArrayList ownedSkus =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-				ArrayList purchaseDataList = 
+				ArrayList purchaseDataList =
 					ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-				//ArrayList signatureList = 
+				//ArrayList signatureList =
 				//	ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE");
-				//String continuationToken = 
+				//String continuationToken =
 				//	ownedItems.getString("INAPP_CONTINUATION_TOKEN");
 
 				for (int i = 0; i < ownedSkus.size(); ++i) {
+					success = true;
 					//String signature = signatureList.get(i);
 					String sku = (String)ownedSkus.get(i);
 					String purchaseData = (String)purchaseDataList.get(i);
@@ -349,13 +480,12 @@ public class BillingPlugin implements IPlugin {
 					String token = json.getString("purchaseToken");
 
 					// TODO: Provide purchase data
-					// TODO: Verify signatures
 
 					if (sku != null && token != null) {
 						skus.add(sku);
 						tokens.add(token);
 					}
-				} 
+				}
 
 				// TODO: Use continuationToken to retrieve > 700 items
 
@@ -366,80 +496,79 @@ public class BillingPlugin implements IPlugin {
 			e.printStackTrace();
 			EventQueue.pushEvent(new OwnedEvent(null, null, "failed"));
 		}
+		return success;
 	}
 
 	private String getResponseCode(Intent data) {
-		try {
-			Bundle bundle = data.getExtras();
+		int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
 
-			int responseCode = bundle.getInt("RESPONSE_CODE");
-
-			switch (responseCode) {
-				case 0:
-					return "ok";
-				case 1:
-					return "cancel";
-				case 2:
-					return "service";
-				case 3:
-					return "billing unavailable";
-				case 4:
-					return "item unavailable";
-				case 5:
-					return "invalid arguments provided to API";
-				case 6:
-					return "fatal error in API";
-				case 7:
-					return "already owned";
-				case 8:
-					return "item not owned";
-			}
-		} catch (Exception e) {
+		switch (responseCode) {
+			case 0:
+				return "ok";
+			case 1:
+				return "cancel";
+			case 2:
+				return "service";
+			case 3:
+				return "billing unavailable";
+			case 4:
+				return "item unavailable";
+			case 5:
+				return "invalid arguments provided to API";
+			case 6:
+				return "fatal error in API";
+			case 7:
+				return "already owned";
+			case 8:
+				return "item not owned";
 		}
 
 		return "unknown error";
 	}
 
 	public void onActivityResult(Integer request, Integer resultCode, Intent data) {
+		if (data == null) {
+			// If there is any onwned purchases, don't send failed event.
+			// We assume that last purchase is the one pending.
+			if (!getPurchases("{}")) {
+				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+				return;
+			}
+		}
+
 		if (request == BUY_REQUEST_CODE) {
-			try {
-				String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-				String sku = null;
-				String responseCode = this.getResponseCode(data);
+			String responseCode = this.getResponseCode(data);
+			String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
+			String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
 
-				if (purchaseData == null) {
-					logger.log("{billing} WARNING: Ignored null purchase data with result code:", resultCode, "and response code:", responseCode);
-					EventQueue.pushEvent(new PurchaseEvent(null, null, responseCode, null));
-				} else {
+			logger.log("{billing} responsecode", responseCode);
+
+			if (resultCode == Activity.RESULT_OK && responseCode == "ok") {
+				logger.log("{billing} purchase data", purchaseData);
+
+				try {
 					JSONObject jo = new JSONObject(purchaseData);
-					sku = jo.getString("productId");
+					String sku = jo.getString("productId");
+					String token = jo.getString("purchaseToken");
+					String receiptString;
+					JSONObject receiptStringCombo = new JSONObject();
+					receiptStringCombo.put("purchaseData", purchaseData);
+					receiptStringCombo.put("dataSignature", dataSignature);
+					receiptString = receiptStringCombo.toString();
 
-					if (sku == null) {
-						logger.log("{billing} WARNING: Malformed purchase json");
+					if (!Security.verifyPurchase(mSignature, purchaseData, dataSignature)) {
+						logger.log("{billing} Purchase signature verification FAILED for sku " + sku);
+						EventQueue.pushEvent(new PurchaseEvent(sku, null, "failed", null));
+						consumeAsync(token, receiptString);
 					} else {
-						switch (resultCode) {
-							case Activity.RESULT_OK:
-								String token = jo.getString("purchaseToken");
-
-								logger.log("{billing} Successfully purchased SKU:", sku);
-								JSONObject receiptStringCombo = new JSONObject();
-								receiptStringCombo.put("purchaseData", data.getStringExtra("INAPP_PURCHASE_DATA"));
-								receiptStringCombo.put("dataSignature", data.getStringExtra("INAPP_DATA_SIGNATURE"));
-								EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptStringCombo.toString()));
-								break;
-							case Activity.RESULT_CANCELED:
-								logger.log("{billing} Purchase canceled for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
-								break;
-							default:
-								logger.log("{billing} Unexpected result code for SKU:", sku, "with result code:", resultCode, "and response code:", responseCode);
-								EventQueue.pushEvent(new PurchaseEvent(sku, null, responseCode, null));
-						}
+						EventQueue.pushEvent(new PurchaseEvent(sku, token, null, receiptString));
 					}
 				}
-			} catch (JSONException e) {
-				logger.log("{billing} WARNING: Failed to parse purchase data:", e);
-				e.printStackTrace();
+				catch (JSONException e) {
+					e.printStackTrace();
+					EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
+				}
+			} else {
 				EventQueue.pushEvent(new PurchaseEvent(null, null, "failed", null));
 			}
 		}

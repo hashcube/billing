@@ -3,5 +3,7 @@
 	<uses-permission android:name="com.android.vending.BILLING"/>
 <!--END_PLUGINS_MANIFEST-->
 <!--START_PLUGINS_APPLICATION-->
+<!--Billing-->
+	<meta-data android:name="BILLING_SIGNATURE" android:value="" />
 <!--END_PLUGINS_APPLICATION-->
 

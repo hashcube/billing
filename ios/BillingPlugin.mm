@@ -29,8 +29,7 @@
 	return self;
 }
 
-- (void) completeTransaction:(SKPaymentTransaction *)transaction
-               receiptString:(NSString *)receiptString{
+- (void) completeTransaction:(SKPaymentTransaction *)transaction receiptString:(NSString *)receiptString {
 	NSString *sku = transaction.payment.productIdentifier;
 	NSString *token = transaction.transactionIdentifier;
 
@@ -50,7 +49,7 @@
 										  @"billingPurchase",@"name",
 										  sku, @"sku",
 										  token, @"token",
-                                          receiptString, @"receiptString",
+										  receiptString, @"receiptString",
 										  [NSNull null], @"failure",
 										  nil]];
 }
@@ -174,10 +173,9 @@
 				NSString *receiptString;
 				if ([NSBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
 					//For iOS 7 and up
-				   	NSURL *receiptURL = [NSBundle appStoreReceiptURL];
-				   	NSData *receiptFile = [[NSData alloc] initWithContentsOfURL:receiptURL];
-				   	NSString *plainString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
-				   	receiptString = [plainString base64EncodedString];
+					NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
+					NSData *receiptFile = [NSData dataWithContentsOfURL:receiptURL];
+					receiptString = [receiptFile base64EncodedStringWithOptions:NSUTF8StringEncoding];
 				}
 				else
 				{
