@@ -75,7 +75,7 @@ public class BillingPlugin implements IPlugin {
 					for (final String key : products.keySet()) {
 						Product product = products.get(key);
 						logger.log("\n{BillingAmazon}", String.format("Product: %s  Type: %s  SKU: %s  Price: %s  Description: %s\n", product.getTitle(), product.getProductType(), product.getSku(), product.getPrice(), product.getDescription()));
-						localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice().getCurrency() + " " + product.getPrice().getValue());
+						localizedPrices.put(product.getSku().split("\\.")[3], product.getPrice());
 					}
 					EventQueue.pushEvent(new InfoEvent(localizedPrices));
 					break;
