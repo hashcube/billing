@@ -4,12 +4,9 @@ The billing plugin supports in-app purchases from the Google Play Store on Andro
 
 ## Installation
 
-Include it in the `manifest.json` file under the "dependencies" section for your game:
-
+Run:
 ~~~
-"dependencies": {
-	"billing": "https://github.com/hashcube/billing.git#master"
-},
+`devkit install https://github.com/hashcube/billing.git`
 ~~~
 
 You can import the billing object anywhere in your application:
