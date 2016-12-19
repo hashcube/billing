@@ -52,7 +52,7 @@ public class BillingPlugin implements IPlugin {
 	IInAppBillingService mService = null;
 	ServiceConnection mServiceConn = null;
 	Object mServiceLock = new Object();
-	static private final int BUY_REQUEST_CODE = 123450;
+	static private final int BUY_REQUEST_CODE = 12340; //Max value can be 65535
 	private String mSignature;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
