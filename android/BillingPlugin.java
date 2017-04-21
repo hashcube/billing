@@ -54,6 +54,7 @@ public class BillingPlugin implements IPlugin {
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 12340; //Max value can be 65535
 	private String mSignature;
+	Map<String, String> localCurrencyCode;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -338,10 +339,14 @@ public class BillingPlugin implements IPlugin {
 						int response = skuDetails.getInt("RESPONSE_CODE");
 						if (response == 0) {
 							ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
+							if(localCurrencyCode == null)
+									localCurrencyCode = new HashMap<String, String>();
 
 							for (String thisResponse : responseList) {
+								logger.log("{billing} Complete data:"+responseList);
 								JSONObject object = new JSONObject(thisResponse);
 								map.put(object.getString("productId"), object.getString("price"));
+								localCurrencyCode.put(object.getString("productId"), object.getString("price_currency_code"));
 							}
 							EventQueue.pushEvent(new InfoEvent(map));
 						}
@@ -552,8 +557,10 @@ public class BillingPlugin implements IPlugin {
 					String token = jo.getString("purchaseToken");
 					String receiptString;
 					JSONObject receiptStringCombo = new JSONObject();
+					String localCurrency = localCurrencyCode.get(sku);
 					receiptStringCombo.put("purchaseData", purchaseData);
 					receiptStringCombo.put("dataSignature", dataSignature);
+					receiptStringCombo.put("localCurrencyCode", localCurrency);
 					receiptString = receiptStringCombo.toString();
 
 					if (!Security.verifyPurchase(mSignature, purchaseData, dataSignature)) {
