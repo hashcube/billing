@@ -343,7 +343,6 @@ public class BillingPlugin implements IPlugin {
 									localCurrencyCode = new HashMap<String, String>();
 
 							for (String thisResponse : responseList) {
-								logger.log("{billing} Complete data:"+responseList);
 								JSONObject object = new JSONObject(thisResponse);
 								map.put(object.getString("productId"), object.getString("price"));
 								localCurrencyCode.put(object.getString("productId"), object.getString("price_currency_code"));
