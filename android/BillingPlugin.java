@@ -54,7 +54,7 @@ public class BillingPlugin implements IPlugin {
 	Object mServiceLock = new Object();
 	static private final int BUY_REQUEST_CODE = 12340; //Max value can be 65535
 	private String mSignature;
-	Map<String, String> localCurrencyCode;
+	HashMap<String, HashMap<String,String>> productInfo;
 
 	public class PurchaseEvent extends com.tealeaf.event.Event {
 		String sku, token, failure, receiptString;
@@ -337,15 +337,23 @@ public class BillingPlugin implements IPlugin {
 								"inapp", querySkus);
 						Map<String, String> map = new HashMap<String, String>();
 						int response = skuDetails.getInt("RESPONSE_CODE");
+						float localPrice;
 						if (response == 0) {
 							ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
-							if(localCurrencyCode == null)
-									localCurrencyCode = new HashMap<String, String>();
+							if(productInfo == null)
+									productInfo = new HashMap<String, HashMap<String,String>>();
 
 							for (String thisResponse : responseList) {
+								logger.log("{billing} Response :" + thisResponse);
 								JSONObject object = new JSONObject(thisResponse);
+								HashMap<String, String> productDetails = new HashMap<String, String>();
+								productDetails.put("price", object.getString("price"));
+								productDetails.put("currencyCode", object.getString("price_currency_code"));
+								localPrice = object.getInt("price_amount_micros") / 1000000; 
+								productDetails.put("localPrice", localPrice + "");
+								productInfo.put(object.getString("productId"), productDetails);
+
 								map.put(object.getString("productId"), object.getString("price"));
-								localCurrencyCode.put(object.getString("productId"), object.getString("price_currency_code"));
 							}
 							EventQueue.pushEvent(new InfoEvent(map));
 						}
@@ -556,10 +564,12 @@ public class BillingPlugin implements IPlugin {
 					String token = jo.getString("purchaseToken");
 					String receiptString;
 					JSONObject receiptStringCombo = new JSONObject();
-					String localCurrency = localCurrencyCode.get(sku);
+					String currencyCode = productInfo.get(sku).get("currencyCode");
+					String localPrice = productInfo.get(sku).get("localPrice");
 					receiptStringCombo.put("purchaseData", purchaseData);
 					receiptStringCombo.put("dataSignature", dataSignature);
-					receiptStringCombo.put("localCurrencyCode", localCurrency);
+					receiptStringCombo.put("localCurrency", currencyCode);
+					receiptStringCombo.put("localPrice", localPrice);
 					receiptString = receiptStringCombo.toString();
 
 					if (!Security.verifyPurchase(mSignature, purchaseData, dataSignature)) {
