@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Iterator;
+import java.text.DecimalFormat;
 
 import com.tealeaf.plugin.IPlugin;
 import android.app.Activity;
@@ -337,7 +338,7 @@ public class BillingPlugin implements IPlugin {
 								"inapp", querySkus);
 						Map<String, String> map = new HashMap<String, String>();
 						int response = skuDetails.getInt("RESPONSE_CODE");
-						float localPrice;
+						double localPrice;
 						if (response == 0) {
 							ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
 							if(productInfo == null)
@@ -349,8 +350,9 @@ public class BillingPlugin implements IPlugin {
 								HashMap<String, String> productDetails = new HashMap<String, String>();
 								productDetails.put("price", object.getString("price"));
 								productDetails.put("currencyCode", object.getString("price_currency_code"));
-								localPrice = object.getInt("price_amount_micros") / 1000000; 
-								productDetails.put("localPrice", localPrice + "");
+								localPrice = object.getInt("price_amount_micros") / 1000000;
+								DecimalFormat df = new DecimalFormat("#.00"); 
+								productDetails.put("localPrice", df.format(localPrice));
 								productInfo.put(object.getString("productId"), productDetails);
 
 								map.put(object.getString("productId"), object.getString("price"));
