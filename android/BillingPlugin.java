@@ -350,8 +350,8 @@ public class BillingPlugin implements IPlugin {
 								HashMap<String, String> productDetails = new HashMap<String, String>();
 								productDetails.put("price", object.getString("price"));
 								productDetails.put("currencyCode", object.getString("price_currency_code"));
-								localPrice = object.getInt("price_amount_micros") / 1000000;
-								DecimalFormat df = new DecimalFormat("#.00"); 
+								localPrice = object.getDouble("price_amount_micros") / 1000000;
+								DecimalFormat df = new DecimalFormat("#.00");
 								productDetails.put("localPrice", df.format(localPrice));
 								productInfo.put(object.getString("productId"), productDetails);
 
