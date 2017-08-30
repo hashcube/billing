@@ -30,7 +30,7 @@ function initializeFromLocalStorage() {
 				// Merge with consumed items
 				var count = 0;
 				for (var item in consumed) {
-					consumedItems[item] = 1;
+					consumedItems[item] = consumed[item];
 					++count;
 				}
 				logger.log("Read", count, "consumed purchased items");
@@ -39,6 +39,20 @@ function initializeFromLocalStorage() {
 	} catch (e) {
 		logger.log("Failed to read consumed items from local storage:", e);
 	}
+}
+
+// To support older version since consumedItems[item] will be 1 for those
+function getPurchaseData(item) {
+  var currData = consumedItems[item];
+
+  if (currData) {
+    return (typeof currData === "object") ? currData : {
+      token: null,
+      receipt: null
+    };
+  } else {
+    return null;
+  }
 }
 
 /*
@@ -90,7 +104,10 @@ function consumePurchasedItem(item, token, receiptString) {
 	try {
 		if (purchasedItems[item]) {
 			delete purchasedItems[item];
-			consumedItems[item] = 1;
+			consumedItems[item] = {
+        token: token,
+        receipt: receiptString
+      };
 
 			localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
 
@@ -106,18 +123,13 @@ function consumePurchasedItem(item, token, receiptString) {
  * Credit all outstanding consumed items.
  */
 function creditAllConsumedItems() {
-	var consumed = [];
+  var currData;
 
 	for (var item in consumedItems) {
 		if (consumedItems[item]) {
-			consumed.push(item);
+      currData = getPurchaseData(item);
+      creditConsumedItem(item, currData.token, currData.receipt);
 		}
-	}
-
-	for (var ii = 0; ii < consumed.length; ++ii) {
-		var item = consumed[ii];
-
-		creditConsumedItem(item);
 	}
 }
 
