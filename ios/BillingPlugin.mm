@@ -25,7 +25,6 @@
 	[[SKPaymentQueue defaultQueue] addTransactionObserver:self];
 
 	self.bundleID = @"unknown.bundle";
-	self.productDetails = [NSMutableDictionary dictionary];
 
 	return self;
 }
@@ -89,7 +88,8 @@
 										  [NSNull null],@"token",
 										  errorCode,@"failure",
 										  nil]];
-	[[SKPaymentQueue defaultQueue] finishTransaction: transaction];
+
+    [[SKPaymentQueue defaultQueue] finishTransaction: transaction];
 }
 
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response {
@@ -116,11 +116,6 @@
 			if (sku != nil && [sku hasPrefix:self.bundleID]) {
 				sku = [sku substringFromIndex:len];
 				[prices setObject:formattedPrice forKey:sku];
-
-        			NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
-                                              product.price,@"localPrice",
-                                              product.priceLocale.currencyCode,@"currencyCode", nil];
-        			[self.productDetails setObject:priceDetails forKey:sku];
 			}
 
 		}
@@ -294,35 +289,19 @@
 - (void) consume:(NSDictionary *)jsonObject {
 	NSString *token = nil;
 	NSString *receiptString = nil;
-	NSString *sku = nil;
-	NSString *productJSON = nil;
-	NSError *error;
 
 	@try {
 		token = [jsonObject valueForKey:@"token"];
 		receiptString = [jsonObject valueForKey:@"receiptString"];
-		sku = [jsonObject valueForKey:@"sku"];
-		NSDictionary *productInfo = [self.productDetails valueForKey:sku];
-		NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
-                                      receiptString,@"purchaseData",
-                                      [productInfo valueForKey:@"currencyCode"],@"localCurrency",
-                                      [[productInfo valueForKey:@"localPrice"] stringValue], @"localPrice",nil];
-		NSData *jsonData = [NSJSONSerialization dataWithJSONObject:priceDetails
-                                                             options:0
-                                                             error:&error
-		if (! jsonData) {
-			productJSON = @"{}";
-		} else {
-			productJSON = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-		}
+
 		SKPaymentTransaction *transaction = [self.purchases valueForKey:token];
 		if (!transaction) {
 			NSLog(@"{billing} Failure consuming item with unknown token: %@", token);
+
 			[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 												  @"billingConsume",@"name",
 												  token,@"token",
-												  productJSON,@"receiptString",
-												  sku, @"sku",
+												  receiptString,@"receiptString",
 												  @"already consumed",@"failure",
 												  nil]];
 		} else {
@@ -337,8 +316,7 @@
 			[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 												  @"billingConsume",@"name",
 												  token,@"token",
-												  productJSON,@"receiptString",
-												  sku, @"sku",
+												  receiptString,@"receiptString",
 												  [NSNull null],@"failure",
 												  nil]];
 		}
@@ -349,8 +327,7 @@
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 											  @"billingConsume",@"name",
 											  token ? token : [NSNull null],@"token",
-											  productJSON ? productJSON : @"noReceiptSent",@"receiptString",
-											  sku, @"sku",
+											  receiptString ? receiptString : @"noReceiptSent",@"receiptString",
 											  @"failed",@"failure",
 											  nil]];
 	}

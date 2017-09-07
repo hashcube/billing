@@ -245,188 +245,189 @@ function onMarketStateChange() {
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
 	logger.log("Installing fake billing API");
 } else {
-	logger.log("Installing JS billing component for native");
+  logger.log("Installing JS billing component for native");
 
-	// Override purchase function to hook into native
-	Billing.prototype.purchase = function(item, simulate) {
-		if (simulate) {
-			if (device.isIPhone || device.isIPad)
-			{
-				simulatePurchase(item, simulate);
-			}
-			else if (simulate == "simulate")
-			{
-				simulated_item = item;
-				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-					"sku": "android.test.purchased"
-				}));
-			} else if (simulate == "cancel") {
-				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-					"sku": "android.test.canceled"
-				}));
-			} else if (simulate == "refund") {
-				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-					"sku": "android.test.refunded"
-				}));
-			} else if (simulate == "unavailable") {
-				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-					"sku": "android.test.unavailable"
-				}));
-			} else {
-				NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-					"sku": "android.test.canceled"
-				}));
-			}
-		} else {
-			NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
-				"sku": item
-			}));
-		}
-	};
+  // Override purchase function to hook into native
+  Billing.prototype.purchase = function(item, simulate) {
+    if (simulate) {
+      if (device.isIPhone || device.isIPad)
+      {
+        simulatePurchase(item, simulate);
+      }
+      else if (simulate == "simulate")
+      {
+        simulated_item = item;
+        NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+          "sku": "android.test.purchased"
+        }));
+      } else if (simulate == "cancel") {
+        NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+          "sku": "android.test.canceled"
+        }));
+      } else if (simulate == "refund") {
+        NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+          "sku": "android.test.refunded"
+        }));
+      } else if (simulate == "unavailable") {
+        NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+          "sku": "android.test.unavailable"
+        }));
+      } else {
+        NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+          "sku": "android.test.canceled"
+        }));
+      }
+    } else {
+      NATIVE.plugins.sendEvent("BillingPlugin", "purchase", JSON.stringify({
+        "sku": item
+      }));
+    }
+  };
 
-	// Request initial market state
-	NATIVE.plugins.sendEvent("BillingPlugin", "isConnected", "{}");
+  // Request initial market state
+  NATIVE.plugins.sendEvent("BillingPlugin", "isConnected", "{}");
 
-	function nativePurchasedItem(sku, token, receiptString) {
-		// Set up map
-		tokenItem[token] = sku;
-		itemToken[sku] = token;
+  function nativePurchasedItem(sku, token, receiptString) {
+    // Set up map
+    tokenItem[token] = sku;
+    itemToken[sku] = token;
 
-		// Record purchases
-		purchasedItem(sku);
+    // Record purchases
+    purchasedItem(sku);
 
-		// Attempt to consume it immediately
-		NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
-			token: token,
-			receiptString: (receiptString)?receiptString:"noreceipt",
-			sku: sku
-		}));
-	}
+    // Attempt to consume it immediately
+    NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
+      token: token,
+      receiptString: (receiptString)?receiptString:"noreceipt",
+      sku: sku
+    }));
+  }
 
-	NATIVE.events.registerHandler('billingPurchase', function(evt) {
-		logger.log("Got billingPurchase event:", JSON.stringify(evt));
+  NATIVE.events.registerHandler('billingPurchase', function(evt) {
+    logger.log("Got billingPurchase event:", JSON.stringify(evt));
 
-		// If SKU event,
-		var sku = evt.sku;
-		if (!sku || evt.failure) {
-			var failure = evt.failure || "cancel";
+    // If SKU event,
+    var sku = evt.sku;
+    if (!sku || evt.failure) {
+      var failure = evt.failure || "cancel";
 
-			logger.log("Unable to purchase item", sku, ":", failure);
+      logger.log("Unable to purchase item", sku, ":", failure);
 
-			if (typeof onFailure === "function") {
-				onFailure(failure, sku);
-			}
-		} else {
-				if(evt.receiptString)
-				{
-					nativePurchasedItem(sku, evt.token, evt.receiptString);
-				}
-				else
-				{
-					nativePurchasedItem(sku, evt.token);
-				}
-		}
-	});
+      if (typeof onFailure === "function") {
+        onFailure(failure, sku);
+      }
+    } else {
+      if(evt.receiptString)
+      {
+        nativePurchasedItem(sku, evt.token, evt.receiptString);
+      }
+      else
+      {
+        nativePurchasedItem(sku, evt.token);
+      }
+    }
+  });
 
-	NATIVE.events.registerHandler('billingConsume', function(evt) {
-		logger.log("Got billingConsume event:", JSON.stringify(evt));
+  NATIVE.events.registerHandler('billingConsume', function(evt) {
+    logger.log("Got billingConsume event:", JSON.stringify(evt));
 
-		// NOTE: Function is organized carefully for callback reentrancy
+    // NOTE: Function is organized carefully for callback reentrancy
 
-		var token = evt.token;
-		var item = tokenItem[token];
+    var token = evt.token;
+    var item = tokenItem[token];
 
-		// If not failed,
-		if (!evt.failure) {
-			consumePurchasedItem(item, token, evt.receiptString);
-		} else {
-			logger.log("Failed to consume token", token, "for item", item, "and will retry in 3 seconds...");
+    // If not failed,
+    if (!evt.failure) {
+      consumePurchasedItem(item, token, evt.receiptString);
+    } else {
+      logger.log("Failed to consume token", token, "for item", item, "and will retry in 3 seconds...");
 
-			setTimeout(function() {
-				NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
-					token: token,
-					receiptString: (evt.receiptString)?receiptString:"noreceipt"
-				}));
-			}, 3000);
-		}
-	});
+      setTimeout(function() {
+        NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
+          token: token,
+          receiptString: (evt.receiptString)?receiptString:"noreceipt"
+        }));
+      }, 3000);
+    }
+  });
 
-	// Wait a couple of seconds to avoid slowing down the startup process
-	var ownedRetryID = setTimeout(function() {
-		ownedRetryID = null;
-		if (!readPurchases) {
-			NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
-		}
-	}, 3000);
+  // Wait a couple of seconds to avoid slowing down the startup process
+  var ownedRetryID = setTimeout(function() {
+    ownedRetryID = null;
+    if (!readPurchases) {
+      NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
+    }
+  }, 3000);
 
-	NATIVE.events.registerHandler('billingOwned', function(evt) {
-		logger.log("Got billingOwned event:", JSON.stringify(evt));
+  NATIVE.events.registerHandler('billingOwned', function(evt) {
+    logger.log("Got billingOwned event:", JSON.stringify(evt));
 
-		if (ownedRetryID !== null) {
-			clearTimeout(ownedRetryID);
-			ownedRetryID = null;
-		}
+    if (ownedRetryID !== null) {
+      clearTimeout(ownedRetryID);
+      ownedRetryID = null;
+    }
 
-		// If attempt failed,
-		if (evt.failure) {
-			ownedRetryID = setTimeout(function() {
-				ownedRetryID = null;
-				if (!readPurchases) {
-					NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
-				}
-			}, 10000);
-		} else {
-			readPurchases = true;
+    // If attempt failed,
+    if (evt.failure) {
+      ownedRetryID = setTimeout(function() {
+        ownedRetryID = null;
+        if (!readPurchases) {
+          NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
+        }
+      }, 10000);
+    } else {
+      readPurchases = true;
 
-			// Add owned items
-			var skus = evt.skus;
-			var tokens = evt.tokens;
-			if (skus && skus.length > 0) {
-				for (var ii = 0, len = skus.length; ii < len; ++ii) {
-					nativePurchasedItem(skus[ii], tokens[ii]);
-				}
-			}
-		}
-	});
+      // Add owned items
+      var skus = evt.skus;
+      var tokens = evt.tokens;
+      if (skus && skus.length > 0) {
+        for (var ii = 0, len = skus.length; ii < len; ++ii) {
+          nativePurchasedItem(skus[ii], tokens[ii]);
+        }
+      }
+    }
+  });
 
-	NATIVE.events.registerHandler('billingConnected', function(evt) {
-		logger.log("Got billingConnected event:", JSON.stringify(evt));
+  NATIVE.events.registerHandler('billingConnected', function(evt) {
+    logger.log("Got billingConnected event:", JSON.stringify(evt));
 
-		isConnected = evt.connected;
+    isConnected = evt.connected;
 
-		onMarketStateChange();
-	});
+    onMarketStateChange();
+  });
 
-	NATIVE.events.registerHandler('billingLocalizedPrices', function(evt) {
-		billing.localizeResponse(evt);
-	});
+  NATIVE.events.registerHandler('billingLocalizedPrices', function(evt) {
+    billing.localizeResponse(evt);
+  });
 
-	window.addEventListener("online", function() {
-		isOnline = true;
+  window.addEventListener("online", function() {
+    isOnline = true;
 
-		onMarketStateChange();
-	});
+    onMarketStateChange();
+  });
 
-	window.addEventListener("offline", function() {
-		isOnline = false;
+  window.addEventListener("offline", function() {
+    isOnline = false;
 
-		onMarketStateChange();
-	});
+    onMarketStateChange();
+  });
 
-	billing.on("MarketAvailable", function(available) {
-		// If just connected,
-		if (available) {
-			if (ownedRetryID !== null) {
-				clearTimeout(ownedRetryID);
-				ownedRetryID = null;
-			}
+  billing.on("MarketAvailable", function(available) {
+    // If just connected,
+    if (available) {
+      if (ownedRetryID !== null) {
+        clearTimeout(ownedRetryID);
+        ownedRetryID = null;
+      }
 
-			// Try to get purchases immediately to react faster
-			if (!readPurchases) {
-				NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
-			}
-		}
-	});
+      // Try to get purchases immediately to react faster
+      if (!readPurchases) {
+        NATIVE.plugins.sendEvent("BillingPlugin", "getPurchases", "{}");
+      }
+    }
+  });
+>>>>>>> parent of 79bd469... Merge branch 'master' into feature-local-currency-with-ios
 }
 
 // Run initial state check
