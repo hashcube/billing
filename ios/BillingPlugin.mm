@@ -117,10 +117,10 @@
 				sku = [sku substringFromIndex:len];
 				[prices setObject:formattedPrice forKey:sku];
 
-        NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
+        			NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
                                               product.price,@"localPrice",
                                               product.priceLocale.currencyCode,@"currencyCode", nil];
-        [self.productDetails setObject:priceDetails forKey:sku];
+        			[self.productDetails setObject:priceDetails forKey:sku];
 			}
 
 		}
