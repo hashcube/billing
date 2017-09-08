@@ -3,12 +3,12 @@ import event.Emitter as Emitter;
 import util.setProperty as setProperty;
 
 /*
-* Items are first purchased, and then consumed.
-*
-* When they are consumed they must not be lost, so they are either
-* delivered to the billing.onPurchase callback or must be stored in
-* localStorage for delivery on the next run.
-*/
+ * Items are first purchased, and then consumed.
+ *
+ * When they are consumed they must not be lost, so they are either
+ * delivered to the billing.onPurchase callback or must be stored in
+ * localStorage for delivery on the next run.
+ */
 
 var purchasedItems = {};
 var consumedItems = {};
@@ -17,150 +17,138 @@ var onFailure; // callback on purchase failure (not consume fail)
 var simulated_item;
 
 /*
-* Read the list of consumed items during startup.
-*/
+ * Read the list of consumed items during startup.
+ */
 function initializeFromLocalStorage() {
-  try {
-    var saved = localStorage.getItem("billingConsumed");
+	try {
+		var saved = localStorage.getItem("billingConsumed");
 
-    if (saved) {
-      var consumed = JSON.parse(saved);
+		if (saved) {
+			var consumed = JSON.parse(saved);
 
-      if (typeof consumed === "object") {
-        // Merge with consumed items
-        var count = 0;
-        for (var item in consumed) {
-          consumedItems[item] = consumed[item];
-          ++count;
-        }
-        logger.log("Read", count, "consumed purchased items");
-      }
-    }
-  } catch (e) {
-    logger.log("Failed to read consumed items from local storage:", e);
-  }
-}
-
-// To support older version since consumedItems[item] will be 1 for those
-function getPurchaseData(item) {
-  var currData = consumedItems[item];
-
-  if (currData) {
-    return (typeof currData === "object") ? currData : {
-      token: null,
-      receipt: null
-    };
-  } else {
-    return null;
-  }
+			if (typeof consumed === "object") {
+				// Merge with consumed items
+				var count = 0;
+				for (var item in consumed) {
+					consumedItems[item] = 1;
+					++count;
+				}
+				logger.log("Read", count, "consumed purchased items");
+			}
+		}
+	} catch (e) {
+		logger.log("Failed to read consumed items from local storage:", e);
+	}
 }
 
 /*
-* Mark an item as purchased but not consumed yet.
-*
-* This list is grabbed from the market so we do not need to store this
-* information locally, yet.
-*/
+ * Mark an item as purchased but not consumed yet.
+ *
+ * This list is grabbed from the market so we do not need to store this
+ * information locally, yet.
+ */
 function purchasedItem(item) {
-  try {
-    purchasedItems[item] = 1;
-  } catch (e) {
-    logger.log("Purchase update failed with error:", e);
-  }
+	try {
+		purchasedItems[item] = 1;
+	} catch (e) {
+		logger.log("Purchase update failed with error:", e);
+	}
 }
 
 /*
-* Attempt to credit a player for their consumed item, and remove it from the
-* consumed items list in local storage on success.
-*/
+ * Attempt to credit a player for their consumed item, and remove it from the
+ * consumed items list in local storage on success.
+ */
 function creditConsumedItem(item, token, receiptString) {
-  try {
-    if (typeof onPurchase === "function" && consumedItems[item]) {
-      if(token && receiptString && receiptString!=="noreceipt")
-      {
-        onPurchase(item === 'android.test.purchased' ? simulated_item : item, receiptString, token);
-        simulated_item = null;
-      }
-      else
-      {
-        onPurchase(item);
-      }
+	try {
+		if (typeof onPurchase === "function" && consumedItems[item]) {
+			if(token && receiptString && receiptString!=="noreceipt")
+			{
+				onPurchase(item === 'android.test.purchased' ? simulated_item : item, receiptString, token);
+				simulated_item = null;
+			}
+			else
+			{
+				onPurchase(item);
+			}
 
-      delete consumedItems[item];
-      localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
+			delete consumedItems[item];
+			localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
 
-      logger.log("Successfully credited consumed item:", item);
-    }
-  } catch (e) {
-    logger.log("Crediting purchase failed with error:", e);
-  }
+			logger.log("Successfully credited consumed item:", item);
+		}
+	} catch (e) {
+		logger.log("Crediting purchase failed with error:", e);
+	}
 }
 
 /*
-* Move an item from the purchased list to the consumed list and update
-* local storage so that it does not get lost.
-*/
+ * Move an item from the purchased list to the consumed list and update
+ * local storage so that it does not get lost.
+ */
 function consumePurchasedItem(item, token, receiptString) {
-  try {
-    if (purchasedItems[item]) {
-      delete purchasedItems[item];
-      consumedItems[item] = {
-        token: token,
-        receipt: receiptString
-      };
+	try {
+		if (purchasedItems[item]) {
+			delete purchasedItems[item];
+			consumedItems[item] = 1;
 
-      localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
+			localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
 
-      logger.log("Successfully consumed purchased item:", item);
-      creditConsumedItem(item, token, receiptString);
-    }
-  } catch (e) {
-    logger.log("Crediting purchase failed with error:", e);
-  }
+			logger.log("Successfully consumed purchased item:", item);
+			creditConsumedItem(item, token, receiptString);
+		}
+	} catch (e) {
+		logger.log("Crediting purchase failed with error:", e);
+	}
 }
 
 /*
-* Credit all outstanding consumed items.
-*/
+ * Credit all outstanding consumed items.
+ */
 function creditAllConsumedItems() {
-  var currData;
+	var consumed = [];
 
-  for (var item in consumedItems) {
-    if (consumedItems[item]) {
-      currData = getPurchaseData(item);
-      creditConsumedItem(item, currData.token, currData.receipt);
-    }
-  }
+	for (var item in consumedItems) {
+		if (consumedItems[item]) {
+			consumed.push(item);
+		}
+	}
+
+	for (var ii = 0; ii < consumed.length; ++ii) {
+		var item = consumed[ii];
+
+		creditConsumedItem(item);
+	}
 }
 
 /*
-* Run purchase simulation.
-*/
+ * Run purchase simulation.
+ */
 function simulatePurchase(item, simulate) {
-  if (!simulate || simulate === "simulate") {
-    setTimeout(function() {
-      logger.log("Simulating item purchase:", item);
-      if (!purchasedItems[item]) {
-        purchasedItem(item);
-        setTimeout(function() {
-          logger.log("Simulating item consume:", item);
-          consumePurchasedItem(item,"0010","noreceipt");
-        }, 2000);
-      } else {
-        logger.log("Item is already purchased.");
-        if (typeof onFailure === "function") {
-          onFailure("already owned", item);
-        }
-      }
-    }, 2000);
-  } else {
-    setTimeout(function() {
-      logger.log("Simulating item failure:", item);
-      if (typeof onFailure === "function") {
-        onFailure(simulate, item);
-      }
-    }, 1000);
-  }
+	if (!simulate || simulate === "simulate") {
+		setTimeout(function() {
+			logger.log("Simulating item purchase:", item);
+			if (!purchasedItems[item]) {
+				purchasedItem(item);
+				setTimeout(function() {
+					logger.log("Simulating item consume:", item);
+					consumePurchasedItem(item,"0010","noreceipt");
+				}, 2000);
+			} else {
+				logger.log("Item is already purchased.");
+				if (typeof onFailure === "function") {
+					onFailure("already owned", item);
+				}
+			}
+		}, 2000);
+	} else {
+		setTimeout(function() {
+			logger.log("Simulating item failure:", item);
+			if (typeof onFailure === "function") {
+				onFailure(simulate, item);
+			}
+		}, 1000);
+	}
 }
 
 // Run initialization tasks
@@ -183,79 +171,79 @@ var isOnline = navigator.onLine;
 var isMarketAvailable = false;
 
 var Billing = Class(Emitter, function (supr) {
-  this.init = function() {
-    supr(this, 'init', arguments);
+	this.init = function() {
+		supr(this, 'init', arguments);
 
-    setProperty(this, "onPurchase", {
-      set: function(f) {
-        // If a callback is being set,
-        if (typeof f === "function") {
-          onPurchase = f;
+		setProperty(this, "onPurchase", {
+			set: function(f) {
+				// If a callback is being set,
+				if (typeof f === "function") {
+					onPurchase = f;
 
-          creditAllConsumedItems();
-        } else {
-          onPurchase = null;
-        }
-      },
-      get: function() {
-        return onPurchase;
-      }
-    });
+					creditAllConsumedItems();
+				} else {
+					onPurchase = null;
+				}
+			},
+			get: function() {
+				return onPurchase;
+			}
+		});
 
-    setProperty(this, "onFailure", {
-      set: function(f) {
-        // If a callback is being set,
-        if (typeof f === "function") {
-          onFailure = f;
-        } else {
-          onFailure = null;
-        }
-      },
-      get: function() {
-        return onFailure;
-      }
-    });
+		setProperty(this, "onFailure", {
+			set: function(f) {
+				// If a callback is being set,
+				if (typeof f === "function") {
+					onFailure = f;
+				} else {
+					onFailure = null;
+				}
+			},
+			get: function() {
+				return onFailure;
+			}
+		});
 
-    setProperty(this, "isMarketAvailable", {
-      set: function(f) {
-      },
-      get: function() {
-        return isMarketAvailable == true;
-      }
-    });
-  };
+		setProperty(this, "isMarketAvailable", {
+			set: function(f) {
+			},
+			get: function() {
+				return isMarketAvailable == true;
+			}
+		});
+	};
 
-  this.requestLocalizedPrices = function(params, next) {
-    NATIVE.plugins.sendEvent("BillingPlugin", "requestLocalizedPrices",
-      JSON.stringify({
-        "skus": params
-      }));
-    this.localizeResponse = next;
-  }
-  this.purchase = simulatePurchase;
+	this.requestLocalizedPrices = function(params, next) {
+		NATIVE.plugins.sendEvent("BillingPlugin", "requestLocalizedPrices",
+				JSON.stringify({
+					"skus": params
+				}));
+		this.localizeResponse = next;
+	}
+	this.purchase = simulatePurchase;
 });
 
 var billing = new Billing;
 
 function onMarketStateChange() {
-  var available = isConnected && isOnline;
+	var available = isConnected && isOnline;
 
-  if (available != isMarketAvailable) {
-    isMarketAvailable = available;
+	if (available != isMarketAvailable) {
+		isMarketAvailable = available;
 
-    if (available) {
-      logger.log("Market is now available");
-    } else {
-      logger.log("Market is now unavailable");
-    }
+		if (available) {
+			logger.log("Market is now available");
+		} else {
+			logger.log("Market is now unavailable");
+		}
 
-    billing.emit("MarketAvailable", available);
-  }
+		billing.emit("MarketAvailable", available);
+	}
 }
 
 // If just simulating native device,
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
-  logger.log("Installing fake billing API");
+	logger.log("Installing fake billing API");
 } else {
   logger.log("Installing JS billing component for native");
 
@@ -310,7 +298,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
     // Attempt to consume it immediately
     NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
       token: token,
-      receiptString: (receiptString)?receiptString:"noreceipt"
+      receiptString: (receiptString)?receiptString:"noreceipt",
+      sku: sku
     }));
   }
 
@@ -439,6 +428,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
       }
     }
   });
+>>>>>>> parent of 79bd469... Merge branch 'master' into feature-local-currency-with-ios
 }
 
 // Run initial state check
