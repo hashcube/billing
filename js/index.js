@@ -356,7 +356,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
       setTimeout(function() {
         NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
           token: token,
-          receiptString: (evt.receiptString)?receiptString:"noreceipt"
+          receiptString: (evt.receiptString)?receiptString:"noreceipt",
+          sku: sku
         }));
       }, 3000);
     }
