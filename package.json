@@ -1,6 +1,6 @@
 {
   "name": "billing",
-  "version": "4.3.8",
+  "version": "4.3.9",
   "devkit": {
     "clientPaths": {
       "billing": "js"
