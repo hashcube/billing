@@ -310,7 +310,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
     // Attempt to consume it immediately
     NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
       token: token,
-      receiptString: (receiptString)?receiptString:"noreceipt"
+      receiptString: (receiptString)?receiptString:"noreceipt",
+      sku: sku
     }));
   }
 
@@ -357,7 +358,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
         NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
           token: token,
           receiptString: (evt.receiptString)?receiptString:"noreceipt",
-          sku: sku
+          sku: item
         }));
       }, 3000);
     }

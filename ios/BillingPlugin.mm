@@ -309,7 +309,7 @@
                                       [[productInfo valueForKey:@"localPrice"] stringValue], @"localPrice",nil];
 		NSData *jsonData = [NSJSONSerialization dataWithJSONObject:priceDetails
                                                              options:0
-                                                             error:&error
+                                                             error:&error];
 		if (! jsonData) {
 			productJSON = @"{}";
 		} else {
