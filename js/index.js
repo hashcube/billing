@@ -73,12 +73,12 @@ function purchasedItem(item) {
 * Attempt to credit a player for their consumed item, and remove it from the
 * consumed items list in local storage on success.
 */
-function creditConsumedItem(item, token, receiptString) {
+function creditConsumedItem(item, token, receiptString, origin) {
   try {
     if (typeof onPurchase === "function" && consumedItems[item]) {
       if(token && receiptString && receiptString!=="noreceipt")
       {
-        onPurchase(item === 'android.test.purchased' ? simulated_item : item, receiptString, token);
+        onPurchase(item === 'android.test.purchased' ? simulated_item : item, receiptString, token, origin);
         simulated_item = null;
       }
       else
@@ -100,19 +100,20 @@ function creditConsumedItem(item, token, receiptString) {
 * Move an item from the purchased list to the consumed list and update
 * local storage so that it does not get lost.
 */
-function consumePurchasedItem(item, token, receiptString) {
+function consumePurchasedItem(item, token, receiptString, origin) {
   try {
     if (purchasedItems[item]) {
       delete purchasedItems[item];
       consumedItems[item] = {
         token: token,
-        receipt: receiptString
+        receipt: receiptString,
+        origin: origin
       };
 
       localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
 
       logger.log("Successfully consumed purchased item:", item);
-      creditConsumedItem(item, token, receiptString);
+      creditConsumedItem(item, token, receiptString, origin);
     }
   } catch (e) {
     logger.log("Crediting purchase failed with error:", e);
@@ -128,7 +129,7 @@ function creditAllConsumedItems() {
   for (var item in consumedItems) {
     if (consumedItems[item]) {
       currData = getPurchaseData(item);
-      creditConsumedItem(item, currData.token, currData.receipt);
+      creditConsumedItem(item, currData.token, currData.receipt, currData.origin);
     }
   }
 }
@@ -299,7 +300,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
   // Request initial market state
   NATIVE.plugins.sendEvent("BillingPlugin", "isConnected", "{}");
 
-  function nativePurchasedItem(sku, token, receiptString) {
+  function nativePurchasedItem(sku, token, receiptString, origin) {
     // Set up map
     tokenItem[token] = sku;
     itemToken[sku] = token;
@@ -311,7 +312,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
     NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
       token: token,
       receiptString: (receiptString)?receiptString:"noreceipt",
-      sku: sku
+      sku: sku,
+      origin: origin
     }));
   }
 
@@ -331,7 +333,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
     } else {
       if(evt.receiptString)
       {
-        nativePurchasedItem(sku, evt.token, evt.receiptString);
+        nativePurchasedItem(sku, evt.token, evt.receiptString, evt.origin);
       }
       else
       {
@@ -350,7 +352,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
 
     // If not failed,
     if (!evt.failure) {
-      consumePurchasedItem(item, token, evt.receiptString);
+      consumePurchasedItem(item, token, evt.receiptString, evt.origin);
     } else {
       logger.log("Failed to consume token", token, "for item", item, "and will retry in 3 seconds...");
 
@@ -358,7 +360,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
         NATIVE.plugins.sendEvent("BillingPlugin", "consume", JSON.stringify({
           token: token,
           receiptString: (evt.receiptString)?receiptString:"noreceipt",
-          sku: item
+          sku: item,
+          origin: evt.origin
         }));
       }, 3000);
     }
