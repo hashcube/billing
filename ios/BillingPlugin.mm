@@ -30,7 +30,7 @@
 	return self;
 }
 
-- (void) completeTransaction:(SKPaymentTransaction *)transaction receiptString:(NSString *)receiptString {
+- (void) completeTransaction:(SKPaymentTransaction *)transaction receiptString:(NSString *)receiptString origin: (NSString*) origin{
 	NSString *sku = transaction.payment.productIdentifier;
 	NSString *token = transaction.transactionIdentifier;
 
@@ -51,6 +51,7 @@
 										  sku, @"sku",
 										  token, @"token",
 										  receiptString, @"receiptString",
+										  origin, @"origin",
 										  [NSNull null], @"failure",
 										  nil]];
 }
@@ -170,12 +171,14 @@
 		NSString *token = transaction.transactionIdentifier;
 
 		switch (transaction.transactionState) {
-			case SKPaymentTransactionStatePurchased:
+			case SKPaymentTransactionStatePurchased: {
 				NSLog(@"{billing} Transaction completed purchase for sku=%@ and token=%@", sku, token);
 				//The following receipt validation is done according to the following article
 				//https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/StoreKitGuide/VerifyingStoreReceipts/VerifyingStoreReceipts.html
 				//
 				NSString *receiptString;
+				NSString *origin = @"";
+
 				if ([NSBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
 					//For iOS 7 and up
 					NSURL *receiptURL = [[NSBundle mainBundle] appStoreReceiptURL];
@@ -188,24 +191,39 @@
 					NSData *receiptFile = transaction.transactionReceipt;
 					receiptString = [[NSString alloc] initWithData:receiptFile encoding:NSUTF8StringEncoding];
 				}
-				[self completeTransaction:transaction receiptString:receiptString];
+
+				if (self.storeOrigin != nil && [self.storeOrigin isEqual:transaction.payment]) {
+					self.storeOrigin = nil;
+					origin = @"store";
+				}
+				[self completeTransaction:transaction receiptString:receiptString origin:origin];
 				break;
-			case SKPaymentTransactionStateRestored:
+			}
+			case SKPaymentTransactionStateRestored: {
 				NSLog(@"{billing} Ignoring restored transaction for sku=%@ and token=%@", sku, token);
 				[[SKPaymentQueue defaultQueue] finishTransaction: transaction];
 				break;
-			case SKPaymentTransactionStatePurchasing:
+			}
+			case SKPaymentTransactionStatePurchasing: {
 				NSLog(@"{billing} Transaction purchasing for sku=%@ and token=%@", sku, token);
 				break;
-			case SKPaymentTransactionStateFailed:
+			}
+			case SKPaymentTransactionStateFailed: {
 				NSLog(@"{billing} Transaction failed with error code %d(%@) for sku=%@ and token=%@", (int)transaction.error.code, transaction.error.localizedDescription, sku, token);
 				[self failedTransaction:transaction];
 				break;
-			default:
+			}
+			default: {
 				NSLog(@"{billing} Ignoring unknown transaction state %d: error=%d for sku=%@ and token=%@", transaction.transactionState, (int)transaction.error.code, sku, token);
 				break;
+			}
 		}
 	}
+}
+
+- (BOOL)paymentQueue:(SKPaymentQueue *)queue shouldAddStorePayment:(SKPayment *)payment forProduct:(SKProduct *)product {
+	self.storeOrigin = payment;
+	return YES;
 }
 
 - (void) requestPurchase:(NSString *)productIdentifier {
@@ -296,11 +314,13 @@
 	NSString *receiptString = nil;
 	NSString *sku = nil;
 	NSString *productJSON = nil;
+	NSString *origin = nil;
 	NSError *error;
 
 	@try {
 		token = [jsonObject valueForKey:@"token"];
 		receiptString = [jsonObject valueForKey:@"receiptString"];
+		origin = [jsonObject valueForKey:@"origin"];
 		sku = [jsonObject valueForKey:@"sku"];
 		NSDictionary *productInfo = [self.productDetails valueForKey:sku];
 		NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -323,6 +343,7 @@
 												  token,@"token",
 												  productJSON,@"receiptString",
 												  sku, @"sku",
+												  origin, @"origin",
 												  @"already consumed",@"failure",
 												  nil]];
 		} else {
@@ -339,6 +360,7 @@
 												  token,@"token",
 												  productJSON,@"receiptString",
 												  sku, @"sku",
+												  origin, @"origin",
 												  [NSNull null],@"failure",
 												  nil]];
 		}
