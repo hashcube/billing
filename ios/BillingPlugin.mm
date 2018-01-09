@@ -120,7 +120,7 @@
 
         			NSDictionary *priceDetails = [NSDictionary dictionaryWithObjectsAndKeys:
                                               product.price,@"localPrice",
-                                              product.priceLocale.currencyCode,@"currencyCode", nil];
+                                              [numberFormatter currencyCode] ,@"currencyCode", nil];
         			[self.productDetails setObject:priceDetails forKey:sku];
 			}
 
@@ -269,7 +269,6 @@
 }
 
 - (void) requestLocalizedPrices: (NSDictionary *)jsonObject {
-
 	NSString *bundledProductId;
 	NSMutableSet *products = [[NSMutableSet alloc] init];
 
