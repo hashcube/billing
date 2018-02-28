@@ -92,19 +92,23 @@ public class BillingPlugin implements IPlugin {
 				case SUCCESSFUL:
 					currentUserId = response.getUserData().getUserId();
 					currentMarketPlace = response.getUserData().getMarketplace();
+					EventQueue.pushEvent(new ConnectedEvent(true));
 					logger.log("{BillingAmazon}", String.format("User: %s market: %s\n", currentUserId, currentMarketPlace));
 					break ;
 
 				case FAILED:
+					EventQueue.pushEvent(new ConnectedEvent(false));
 					logger.log("{BillingAmazon}", "Failed to fetch user data");
 				case NOT_SUPPORTED:
-    					logger.log("{BillingAmazon}", "This call is not supported");
+					EventQueue.pushEvent(new ConnectedEvent(false));
+					logger.log("{BillingAmazon}", "This call is not supported");
 					break ;
 			}
 		}
 
 		@Override
-		public void onPurchaseUpdatesResponse(PurchaseUpdatesResponse purchaseUpdatesResponse) {}
+		public void onPurchaseUpdatesResponse(PurchaseUpdatesResponse response) {
+		}
 
 		@Override
 		public void onPurchaseResponse(PurchaseResponse purchaseResponse) {
