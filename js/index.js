@@ -1,3 +1,4 @@
+import .browser;
 import device;
 import event.Emitter as Emitter;
 import util.setProperty as setProperty;
@@ -257,6 +258,11 @@ function onMarketStateChange() {
 // If just simulating native device,
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
   logger.log("Installing fake billing API");
+  Billing.prototype.purchase = function (item, simulate) {
+    if (!simulate) {
+      Billing.prototype.purchase = browser.purchase;
+    }
+  };
 } else {
   logger.log("Installing JS billing component for native");
 
