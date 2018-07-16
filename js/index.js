@@ -260,7 +260,7 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
   logger.log("Installing fake billing API");
   Billing.prototype.purchase = function (item, simulate) {
     if (!simulate) {
-      Billing.prototype.purchase = browser.purchase;
+      browser.purchase(item);
     }
   };
 } else {
