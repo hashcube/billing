@@ -8,7 +8,7 @@ var Billing = Class(Emitter, function (supr) {
 			product : item.product, // URL of open graph object browser only
 			quantity: item.quantity,
 			request_id: item.reciept
-		}, this.callback);
+		}, bind(this, this.callback));
 	};
 
 	this.callback = function (data) {

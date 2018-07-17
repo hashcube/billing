@@ -237,7 +237,7 @@ var Billing = Class(Emitter, function (supr) {
   this.purchase = simulatePurchase;
 });
 
-var billing = new Billing;
+var billing = new Billing();
 
 function onMarketStateChange() {
   var available = isConnected && isOnline;
@@ -260,6 +260,8 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
   logger.log("Installing fake billing API");
   Billing.prototype.purchase = function (item, simulate) {
     if (!simulate) {
+      browser.onPurchase = onPurchase;
+      browser.onFailure = onFailure;
       browser.purchase(item);
     }
   };
