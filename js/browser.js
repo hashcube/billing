@@ -4,32 +4,36 @@ var Billing = Class(Emitter, function (supr) {
 	this.purchase = function (item) {
 		FB.ui({
 			method: 'pay',
-			action: 'purchaseitem',
-			product : item.product, // URL of open graph object browser only
+			action: 'purchaseiap',
+			product_id: item,
 			quantity: item.quantity,
-			request_id: item.reciept
-		}, bind(this, this.callback));
+			request_id: item.reciept,
+			developer_payload: 'Boom boom pow!'
+		}, bind(this, function (data) {
+			this.callback(data, item);
+		}
+		));
 	};
 
-	this.callback = function (data) {
+	this.callback = function (data, item) {
 		if (!data || data.error_code) {
 			if (typeof this.onFailure === 'function') {
 				logger.info("BILLING : onFailure of Billing plugin");
-				this.onFailure(data);
+				this.onFailure(item);
 			} else {
 				logger.info("BILLING : onFailure of Billing plugin is not defined");
 			}
 		} else if (data && data.status === 'completed') {
 			if (typeof this.onPurchase === 'function') {
 				logger.info("BILLING : < sync > onPurchase of Billing plugin");
-				this.onPurchase(data, false);
+				this.onPurchase(item, false);
 			} else {
 				logger.info("BILLING : < sync > onPurchase of Billing plugin is not defined");
 			}
 		} else if (data && data.status === 'initiated') {
 			if (typeof this.onPurchase === 'function') {
 				logger.info("BILLING : < async > onPurchase of Billing plugin");
-				this.onPurchase(data, true);
+				this.onPurchase(item, true);
 			} else {
 				logger.info("BILLING : < async > onPurchase of Billing plugin is not defined");
 			}
