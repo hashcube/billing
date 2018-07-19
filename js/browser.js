@@ -22,14 +22,14 @@ var Billing = Class(Emitter, function (supr) {
 			} else {
 				logger.info("BILLING : onFailure of Billing plugin is not defined");
 			}
-		} else if (data && data.status === 'completed') {
+		} else if (data.status === 'completed') {
 			if (typeof this.onPurchase === 'function') {
 				logger.info("BILLING : < sync > onPurchase of Billing plugin");
 				this.onPurchase(item, false);
 			} else {
 				logger.info("BILLING : < sync > onPurchase of Billing plugin is not defined");
 			}
-		} else if (data && data.status === 'initiated') {
+		} else if (data.status === 'initiated') {
 			if (typeof this.onPurchase === 'function') {
 				logger.info("BILLING : < async > onPurchase of Billing plugin");
 				this.onPurchase(item, true);
