@@ -257,7 +257,6 @@ function onMarketStateChange() {
 
 // If just simulating native device,
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
-  logger.log("Installing fake billing API");
   Billing.prototype.purchase = function (item, simulate) {
     if (!simulate) {
       browser.onPurchase = onPurchase;

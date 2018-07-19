@@ -7,8 +7,7 @@ var Billing = Class(Emitter, function (supr) {
 			action: 'purchaseiap',
 			product_id: item,
 			quantity: item.quantity,
-			request_id: item.reciept,
-			developer_payload: 'Boom boom pow!'
+			request_id: item.reciept
 		}, bind(this, function (data) {
 			this.callback(data, item);
 		}
