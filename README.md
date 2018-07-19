@@ -15,6 +15,9 @@ You can import the billing object anywhere in your application:
 import billing as billing;
 ~~~
 
+### facebook web Setup
+
+For facebook iap to integrate with your game make sure the `product id` is same in both app dashboard and game.
 
 ### iOS Setup
 
