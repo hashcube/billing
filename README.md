@@ -17,7 +17,11 @@ import billing as billing;
 
 ### facebook web Setup
 
-For facebook iap to integrate with your game make sure the `product id` is same in both app dashboard and game.
+For facebook iap to integrate with your game: 
+1.Cofigure the url of your game(Ex: https://game.com) in the facebook app dashboard
+2.Configure the web-payments https://developers.facebook.com/apps/"app-id"/payments/canvas_payments/
+3.Add the products in the products section.Here add the product(ex: coins100)
+4.Make sure the `product id`(unique identifier for your IAP ex: coins100) is same in both app dashboard and game.
 
 ### iOS Setup
 
