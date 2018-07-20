@@ -5,8 +5,7 @@ var Billing = Class(Emitter, function (supr) {
     FB.ui({
       method: 'pay',
       action: 'purchaseiap',
-      product_id: item,
-      quantity: item.quantity
+      product_id: item
     }, bind(this, function (data) {
       this.callback(data, item);
     }));
