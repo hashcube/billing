@@ -2,15 +2,14 @@ import event.Emitter as Emitter;
 
 var Billing = Class(Emitter, function (supr) {
   this.purchase = function (item) {
-	FB.ui({
-	  method: 'pay',
-	  action: 'purchaseiap',
-	  product_id: item,
-	  quantity: item.quantity
-	}, bind(this, function (data) {
+		FB.ui({
+      method: 'pay',
+      action: 'purchaseiap',
+      product_id: item,
+      quantity: item.quantity
+		}, bind(this, function (data) {
 	    this.callback(data, item);
-	  }
-	));
+	  }));
   };
 
   this.callback = function (data, item) {
