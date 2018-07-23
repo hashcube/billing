@@ -25,26 +25,23 @@ var Billing = Class(Emitter, function (supr) {
   };
 
   this.consumeItem = function (item, purchase_token, access_token) {
-    if (purchasedItems[item]) {
-      delete purchasedItems[item];
-      consumedItems[item] = {
-        token: access_token,
-        receipt: null
-      };
-      FB.api('/' + purchase_token + '/consume',
-        'post', {
-          access_token: access_token
-        }, bind(this, function (response) {
-          if (response && response.success) {
+    consumedItems[item] = {
+      token: access_token,
+      receipt: null
+    };
+    FB.api('/' + purchase_token + '/consume',
+      'post', {
+        access_token: access_token
+      }, bind(this, function (response) {
+        if (response && response.success) {
+          this.creditConsumed(item, purchase_token);
+        } else {
+          // retry consuming if failed
+          setTimeout(bind(this, function () {
             this.creditConsumed(item, purchase_token);
-          } else {
-            // retry consuming if failed
-            setTimeout(bind(this, function () {
-              this.creditConsumed(item, purchase_token);
-            }, 3000));
-          }
-      }));
-    }
+          }, 3000));
+        }
+    }));
   };
 
   this.creditConsumed = function (item, token) {
