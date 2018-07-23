@@ -52,7 +52,6 @@ var Billing = Class(Emitter, function (supr) {
       this.onPurchase(item, null, token);
     }
     delete consumedItems[item];
-    // saving items which were purchased but not consumed
     localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
   };
 
