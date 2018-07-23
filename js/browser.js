@@ -1,17 +1,17 @@
 import event.Emitter as Emitter;
 
 var Billing = Class(Emitter, function (supr) {
-  this.purchase = function (item) {
+  this.purchase = function (item, access_token) {
     FB.ui({
       method: 'pay',
       action: 'purchaseiap',
       product_id: item
     }, bind(this, function (data) {
-      this.callback(data, item);
+      this.callback(data, item, access_token);
     }));
   };
 
-  this.callback = function (data, item) {
+  this.callback = function (data, item, access_token) {
     if (!data || data.error_code) {
       if (typeof this.onFailure === 'function') {
         logger.info("BILLING : onFailure of Billing plugin");
@@ -20,20 +20,24 @@ var Billing = Class(Emitter, function (supr) {
         logger.info("BILLING : onFailure of Billing plugin is not defined");
       }
     } else if (data.status === 'completed') {
-        if (typeof this.onPurchase === 'function') {
-            logger.info("BILLING : < sync > onPurchase of Billing plugin");
-            this.onPurchase(item, false);
-        } else {
-            logger.info("BILLING : < sync > onPurchase of Billing plugin is not defined");
+        this.consumeItem(item, data.purchase_token, access_token);
+      }
+  };
+
+  this.consumeItem = function (item, purchase_token, access_token) {
+    FB.api('/' + purchase_token + '/consume',
+      'post', {
+        access_token: access_token
+      }, bind(this, function (response) {
+        if (response && response.success) {
+          if (typeof this.onPurchase === 'function') {
+            this.onPurchase(item, null, purchase_token);
+            logger.info("BILLING : onPurchase of Billing plugin");
+          } else {
+            logger.info("BILLING : onPurchase of Billing plugin is not defined");
+          }
         }
-    } else if (data.status === 'initiated') {
-        if (typeof this.onPurchase === 'function') {
-          logger.info("BILLING : < async > onPurchase of Billing plugin");
-          this.onPurchase(item, true);
-        } else {
-          logger.info("BILLING : < async > onPurchase of Billing plugin is not defined");
-        }
-    }
+    }));
   };
 });
 

@@ -257,11 +257,11 @@ function onMarketStateChange() {
 
 // If just simulating native device,
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
-  Billing.prototype.purchase = function (item, simulate) {
+  Billing.prototype.purchase = function (item, simulate, access_token) {
     if (!simulate) {
       browser.onPurchase = onPurchase;
       browser.onFailure = onFailure;
-      browser.purchase(item);
+      browser.purchase(item, access_token);
     }
   };
 } else {
