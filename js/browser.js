@@ -9,11 +9,11 @@ var Billing = Class(Emitter, function (supr) {
       action: 'purchaseiap',
       product_id: item
     }, bind(this, function (data) {
-      this.callback(data, item, access_token);
+      this.afterPurchase(data, item, access_token);
     }));
   };
 
-  this.callback = function (data, item, access_token) {
+  this.afterPurchase = function (data, item, access_token) {
     if (!data || data.error_code) {
       this.onFailure(item);
     } else if (data.status === 'completed') {
