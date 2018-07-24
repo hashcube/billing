@@ -1,3 +1,4 @@
+import .browser;
 import device;
 import event.Emitter as Emitter;
 import util.setProperty as setProperty;
@@ -236,7 +237,7 @@ var Billing = Class(Emitter, function (supr) {
   this.purchase = simulatePurchase;
 });
 
-var billing = new Billing;
+var billing = new Billing();
 
 function onMarketStateChange() {
   var available = isConnected && isOnline;
@@ -256,7 +257,13 @@ function onMarketStateChange() {
 
 // If just simulating native device,
 if (!GLOBAL.NATIVE || !device.isMobileNative) {
-  logger.log("Installing fake billing API");
+  Billing.prototype.purchase = function (item, simulate, access_token) {
+    if (!simulate) {
+      browser.onPurchase = onPurchase;
+      browser.onFailure = onFailure;
+      browser.purchase(item, access_token);
+    }
+  };
 } else {
   logger.log("Installing JS billing component for native");
 
