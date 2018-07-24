@@ -2,8 +2,6 @@ import event.Emitter as Emitter;
 
 var Billing = Class(Emitter, function (supr) {
   var consumedItems = {};
-  var purchasedItems = {};
-
 
   this.purchase = function (item, access_token) {
     FB.ui({
@@ -19,7 +17,6 @@ var Billing = Class(Emitter, function (supr) {
     if (!data || data.error_code) {
       this.onFailure(item);
     } else if (data.status === 'completed') {
-      purchasedItems[item] = 1;
       this.consumeItem(item, data.purchase_token, access_token);
     }
   };
