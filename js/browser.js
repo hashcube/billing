@@ -35,7 +35,7 @@ var Billing = Class(Emitter, function (supr) {
         } else {
           // retry consuming if failed
           setTimeout(bind(this, function () {
-            this.creditConsumed(item, purchase_token);
+            this.consumeItem(item, purchase_token, access_token);
           }, 3000));
         }
     }));
