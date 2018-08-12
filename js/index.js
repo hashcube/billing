@@ -22,8 +22,13 @@ var simulated_item;
 */
 function initializeFromLocalStorage() {
   try {
-    var saved = localStorage.getItem("billingConsumed");
+    var saved = localStorage.getItem("billingConsumed"),
+      purchased_item = localStorage.removeItem("purchasedItem");
 
+    if (purchased_item) {
+      browser.consumeItem(purchased_item.item,
+        purchased_item.purchase_token, purchased_item.purchase_token);
+    }
     if (saved) {
       var consumed = JSON.parse(saved);
 
