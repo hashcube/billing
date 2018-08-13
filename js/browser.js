@@ -1,8 +1,6 @@
 import event.Emitter as Emitter;
 
 var Billing = Class(Emitter, function (supr) {
-  var consumedItems = {};
-
   this.purchase = function (item, access_token) {
     FB.ui({
       method: 'pay',
@@ -22,10 +20,11 @@ var Billing = Class(Emitter, function (supr) {
   };
 
   this.consumeItem = function (item, purchase_token, access_token) {
-    consumedItems[item] = {
-      token: access_token,
-      receipt: null
-    };
+    localStorage.setItem("purchasedItem", {
+      item: item,
+      purchase_token: purchase_token,
+      access_token: access_token
+    });
     FB.api('/' + purchase_token + '/consume',
       'post', {
         access_token: access_token
@@ -44,9 +43,8 @@ var Billing = Class(Emitter, function (supr) {
   this.creditConsumed = function (item, token) {
     if (token) {
       this.onPurchase(item, null, token);
+      localStorage.removeItem("purchasedItem");
     }
-    delete consumedItems[item];
-    localStorage.setItem("billingConsumed", JSON.stringify(consumedItems));
   };
 
   this.onPurchase = function () {};
