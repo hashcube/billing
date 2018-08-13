@@ -28,8 +28,8 @@ function initializeFromLocalStorage() {
     if (purchased_item) {
       var purchased = JSON.parse(purchased_item);
 
-      browser.consumeItem(purchased_item.item,
-        purchased_item.purchase_token, purchased_item.purchase_token);
+      browser.consumeItem(purchased.item,
+        purchased.purchase_token, purchased.purchase_token);
     }
     if (saved) {
       var consumed = JSON.parse(saved);
