@@ -20,11 +20,11 @@ var Billing = Class(Emitter, function (supr) {
   };
 
   this.consumeItem = function (item, purchase_token, access_token) {
-    localStorage.setItem("purchasedItem", {
+    localStorage.setItem("purchasedItem", JSON.stringify({
       item: item,
       purchase_token: purchase_token,
       access_token: access_token
-    });
+    }));
     FB.api('/' + purchase_token + '/consume',
       'post', {
         access_token: access_token
