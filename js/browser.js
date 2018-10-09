@@ -1,6 +1,5 @@
 import event.Emitter as Emitter;
 import fbinstant as fbinstant;
-import quest.modules.util as util;
 
 var Billing = Class(Emitter, function (supr) {
   this.purchase = function (product_id, access_token, payload) {
