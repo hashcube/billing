@@ -1,17 +1,19 @@
 import event.Emitter as Emitter;
 import fbinstant as fbinstant;
+import quest.modules.util as util;
 
 var Billing = Class(Emitter, function (supr) {
   this.purchase = function (product_id, access_token, payload) {
     var product = {
       productID: product_id
-    };
+    },
+    is_not_iOS = this.isNotiOSDevice();
 
     if (payload) {
       product.developerPayload = payload;
     }
 
-    if (GC.app.payments_ready) {
+    if (is_not_iOS || this.isPaymentsReady()) {
       fbinstant.purchaseAsync(product)
         .then(bind(this, function (purchase) {
           this.afterPurchase(purchase, access_token);
@@ -19,13 +21,15 @@ var Billing = Class(Emitter, function (supr) {
         .catch(bind(this, function (e) {
           this.onFailure(product_id);
         }));
+    } else if (!is_not_iOS) {
+        this.onFailure(product_id, true);
     } else {
-      this.onFailure(product_id);
+        this.onFailure(product_id);
     }
   };
 
   this.afterPurchase = function (data, access_token) {
-      this.consumeItem(data, access_token);
+    this.consumeItem(data, access_token);
   };
 
   this.consumeItem = function (data, access_token) {
@@ -45,7 +49,7 @@ var Billing = Class(Emitter, function (supr) {
       }))
       .catch(bind(this, function(){
         setTimeout(bind(this, function () {
-          this.consumeItem(item, purchase_token, access_token);
+          this.consumeItem(data, access_token);
         }, 3000));
       }));
   };
@@ -64,6 +68,20 @@ var Billing = Class(Emitter, function (supr) {
           }, 3000));
         }));
     }
+  };
+
+  this.isPaymentsReady = function () {
+    if (GC.app.payments_ready) {
+      return true;
+    }
+    return false;
+  }
+
+  this.isNotiOSDevice = function () {
+    var device_type =  util.getDeviceInfo().type;
+    return (device_type != 'IPhone'
+      && device_type != 'IPad'
+      && device_type != 'IPod');
   };
 
   this.onPurchase = function () {};
