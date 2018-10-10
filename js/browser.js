@@ -66,30 +66,28 @@ var Billing = Class(Emitter, function (supr) {
   this.requestLocalizedPrices = function (products, cb) {
     var res = {}, id;
 
-    if (fbinstant.payments_ready) {
-      fbinstant.getCatalogAsync()
-        .then(function (catalog) {
-          res['data'] = {};
-
-          _.each(catalog, function (val) {
-            if(_.contains(products, val['productID'])) {
-              id = val['productID'];
-              res['data'][id] = {};
-
-              // Setting currency attribute as empty string
-              // since amount string contains currency symbol
-              res['data'][id].currency = '';
-              res['data'][id].amount = val['price'];
-            }
-          });
-          cb(res);
-        })
-        .catch(function (e){
-          cb(res);
-        });
-    } else {
+    if (!fbinstant.payments_ready) {
       cb(res);
+      return;
     }
+
+    fbinstant.getCatalogAsync()
+      .then(function (catalog) {
+        res['data'] = {};
+
+        _.each(catalog, function (val) {
+          if(_.contains(products, val['productID'])) {
+            id = val['productID'];
+            res['data'][id] = {};
+            res['data'][id].currency_code = val['priceCurrencyCode'];
+            res['data'][id].amount = val['price'];
+          }
+        });
+        cb(res);
+      })
+      .catch(function (e){
+        cb(res);
+      });
   };
 
   this.onPurchase = function () {};
