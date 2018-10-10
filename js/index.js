@@ -270,6 +270,9 @@ if (!GLOBAL.NATIVE || !device.isMobileNative) {
       browser.onFailure = onFailure;
       browser.purchase(item, access_token);
     }
+  },
+  Billing.prototype.requestLocalizedPrices = function (products, cb) {
+    browser.requestLocalizedPrices(products, cb);
   };
 } else {
   logger.log("Installing JS billing component for native");
