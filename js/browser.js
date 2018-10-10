@@ -76,11 +76,12 @@ var Billing = Class(Emitter, function (supr) {
         res['data'] = {};
 
         _.each(catalog, function (val) {
-          if(_.contains(products, val['productID'])) {
-            id = val['productID'];
-            res['data'][id] = {};
-            res['data'][id].currency_code = val['priceCurrencyCode'];
-            res['data'][id].amount = val['price'];
+          if(_.contains(products, val.productID)) {
+            id = val.productID;
+            res.data[id] = {
+              currency_code: val.priceCurrencyCode,
+              amount: val.price
+            };
           }
         });
         cb(res);
