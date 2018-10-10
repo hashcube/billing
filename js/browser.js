@@ -1,49 +1,64 @@
 import event.Emitter as Emitter;
+import fbinstant as fbinstant;
 
 var Billing = Class(Emitter, function (supr) {
-  this.purchase = function (item, access_token) {
-    FB.ui({
-      method: 'pay',
-      action: 'purchaseiap',
-      product_id: item
-    }, bind(this, function (data) {
-      this.afterPurchase(data, item, access_token);
-    }));
-  };
+  this.purchase = function (product_id, access_token, payload) {
+    var product = {
+      productID: product_id
+    };
 
-  this.afterPurchase = function (data, item, access_token) {
-    if (!data || data.error_code) {
-      this.onFailure(item);
-    } else if (data.status === 'completed') {
-      this.consumeItem(item, data.purchase_token, access_token);
+    if (payload) {
+      product.developerPayload = payload;
+    }
+
+    if (fbinstant.payments_ready) {
+      fbinstant.purchaseAsync(product)
+        .then(bind(this, function (purchase) {
+          this.consumeItem(purchase, access_token);
+        }))
+        .catch(bind(this, function (e) {
+          this.onFailure(product_id);
+        }));
+    } else {
+      this.onFailure(product_id, true);
     }
   };
 
-  this.consumeItem = function (item, purchase_token, access_token) {
-    localStorage.setItem("purchasedItem", JSON.stringify({
+  this.consumeItem = function (data, access_token) {
+    var item = data.productID,
+      purchase_token = data.purchaseToken;
+
+    fbinstant.setDataAsync({purchasedItem: {
       item: item,
       purchase_token: purchase_token,
       access_token: access_token
-    }));
-    FB.api('/' + purchase_token + '/consume',
-      'post', {
-        access_token: access_token
-      }, bind(this, function (response) {
-        if (response && response.success) {
-          this.creditConsumed(item, purchase_token);
-        } else {
-          // retry consuming if failed
-          setTimeout(bind(this, function () {
-            this.consumeItem(item, purchase_token, access_token);
-          }, 3000));
-        }
-    }));
+    }})
+      .then(bind(this, function () {
+        return fbinstant.consumePurchaseAsync(purchase_token);
+      }))
+      .then(bind(this, function (){
+        this.creditConsumed(data);
+      }))
+      .catch(bind(this, function(){
+        setTimeout(bind(this, function () {
+          this.consumeItem(data, access_token);
+        }, 3000));
+      }));
   };
 
-  this.creditConsumed = function (item, token) {
+  this.creditConsumed = function (data) {
+    var item = data.productID,
+      token = data.purchaseToken,
+      reciept = JSON.stringify(data);
+
     if (token) {
-      this.onPurchase(item, null, token);
-      localStorage.removeItem("purchasedItem");
+      this.onPurchase(item, reciept, token);
+      fbinstant.setDataAsync({purchasedItem: undefined})
+        .catch(bind(this, function (){
+          setTimeout(bind(this, function () {
+            this.creditConsumed(data);
+          }, 3000));
+        }));
     }
   };
 
