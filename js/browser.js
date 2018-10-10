@@ -83,6 +83,9 @@ var Billing = Class(Emitter, function (supr) {
             }
           });
           cb(res);
+        })
+        .catch(function (e){
+          cb(res);
         });
     } else {
       cb(res);
