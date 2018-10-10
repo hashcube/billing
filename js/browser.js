@@ -11,21 +11,17 @@ var Billing = Class(Emitter, function (supr) {
       product.developerPayload = payload;
     }
 
-    if (GC.app.payments_ready) {
+    if (fbinstant.payments_ready) {
       fbinstant.purchaseAsync(product)
         .then(bind(this, function (purchase) {
-          this.afterPurchase(purchase, access_token);
+          this.consumeItem(purchase, access_token);
         }))
         .catch(bind(this, function (e) {
           this.onFailure(product_id);
         }));
     } else {
-      this.onFailure(product_id);
+      this.onFailure(product_id, true);
     }
-  };
-
-  this.afterPurchase = function (data, access_token) {
-      this.consumeItem(data, access_token);
   };
 
   this.consumeItem = function (data, access_token) {
@@ -45,7 +41,7 @@ var Billing = Class(Emitter, function (supr) {
       }))
       .catch(bind(this, function(){
         setTimeout(bind(this, function () {
-          this.consumeItem(item, purchase_token, access_token);
+          this.consumeItem(data, access_token);
         }, 3000));
       }));
   };
