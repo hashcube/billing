@@ -1,5 +1,6 @@
 import event.Emitter as Emitter;
 import fbinstant as fbinstant;
+import util.underscore as _;
 
 var Billing = Class(Emitter, function (supr) {
   this.purchase = function (product_id, access_token, payload) {
@@ -59,6 +60,34 @@ var Billing = Class(Emitter, function (supr) {
             this.creditConsumed(data);
           }, 3000));
         }));
+    }
+  };
+
+  this.requestLocalizedPrices = function (products, cb) {
+    var res = {},
+      catalog, id;
+
+    if (fbinstant.payments_ready) {
+      fbinstant.getCatalogAsync()
+        .then(function (data) {
+          catalog = data;
+          res['data'] = {};
+
+          _.each(catalog, function (val) {
+            if(_.contains(products, val['productID'])) {
+              id = val['productID'];
+              res['data'][id] = {};
+
+              // Setting currency attribute as empty string
+              // since amount string contains currency symbol
+              res['data'][id].currency = '';
+              res['data'][id].amount = val['price'];
+            }
+          });
+          cb(res);
+        });
+    } else {
+      cb(res);
     }
   };
 
