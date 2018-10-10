@@ -64,13 +64,11 @@ var Billing = Class(Emitter, function (supr) {
   };
 
   this.requestLocalizedPrices = function (products, cb) {
-    var res = {},
-      catalog, id;
+    var res = {}, id;
 
     if (fbinstant.payments_ready) {
       fbinstant.getCatalogAsync()
-        .then(function (data) {
-          catalog = data;
+        .then(function (catalog) {
           res['data'] = {};
 
           _.each(catalog, function (val) {
