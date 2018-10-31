@@ -128,6 +128,7 @@
 		[[PluginManager get] dispatchJSEvent:[NSDictionary dictionaryWithObjectsAndKeys:
 			@"billingLocalizedPrices",@"name",
 			prices,@"data",
+			[numberFormatter currencyCode],@"currency",
 			nil]];
 		return;
 	}
