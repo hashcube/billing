@@ -103,10 +103,12 @@ public class BillingPlugin implements IPlugin {
 
 	public class InfoEvent extends com.tealeaf.event.Event {
 		Map<String, String> data;
+		String currency;
 
-		public InfoEvent(Map<String, String> prices) {
+		public InfoEvent(Map<String, String> prices, String l_currency) {
 			super("billingLocalizedPrices");
 			this.data = prices;
+			this.currency = l_currency;
 		}
 	}
 
@@ -337,6 +339,7 @@ public class BillingPlugin implements IPlugin {
 						Bundle skuDetails = mService.getSkuDetails(3, _ctx.getPackageName(),
 								"inapp", querySkus);
 						Map<String, String> map = new HashMap<String, String>();
+						String l_currency = null;
 						int response = skuDetails.getInt("RESPONSE_CODE");
 						double localPrice;
 						if (response == 0) {
@@ -350,6 +353,7 @@ public class BillingPlugin implements IPlugin {
 								HashMap<String, String> productDetails = new HashMap<String, String>();
 								productDetails.put("price", object.getString("price"));
 								productDetails.put("currencyCode", object.getString("price_currency_code"));
+								l_currency = object.getString("price_currency_code");
 								localPrice = object.getDouble("price_amount_micros") / 1000000;
 								DecimalFormat df = new DecimalFormat("#.00");
 								productDetails.put("localPrice", df.format(localPrice));
@@ -357,7 +361,7 @@ public class BillingPlugin implements IPlugin {
 
 								map.put(object.getString("productId"), object.getString("price"));
 							}
-							EventQueue.pushEvent(new InfoEvent(map));
+							EventQueue.pushEvent(new InfoEvent(map, l_currency));
 						}
 					} catch(Exception e) {
 						logger.log("{billing} WARNING: Failure in getting data:", e);
