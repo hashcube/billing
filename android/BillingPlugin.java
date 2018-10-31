@@ -353,7 +353,6 @@ public class BillingPlugin implements IPlugin {
 								HashMap<String, String> productDetails = new HashMap<String, String>();
 								productDetails.put("price", object.getString("price"));
 								productDetails.put("currencyCode", object.getString("price_currency_code"));
-								l_currency = object.getString("price_currency_code");
 								localPrice = object.getDouble("price_amount_micros") / 1000000;
 								DecimalFormat df = new DecimalFormat("#.00");
 								productDetails.put("localPrice", df.format(localPrice));
@@ -361,6 +360,7 @@ public class BillingPlugin implements IPlugin {
 
 								map.put(object.getString("productId"), object.getString("price"));
 							}
+							l_currency = new JSONObject(responseList.get(responseList.size() - 1)).getString("price_currency_code");
 							EventQueue.pushEvent(new InfoEvent(map, l_currency));
 						}
 					} catch(Exception e) {
