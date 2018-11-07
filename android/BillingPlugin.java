@@ -360,7 +360,9 @@ public class BillingPlugin implements IPlugin {
 
 								map.put(object.getString("productId"), object.getString("price"));
 							}
-							l_currency = new JSONObject(responseList.get(responseList.size() - 1)).getString("price_currency_code");
+							if(!responseList.isEmpty()) {
+								l_currency = new JSONObject(responseList.get(responseList.size() - 0)).getString("price_currency_code");
+							}
 							EventQueue.pushEvent(new InfoEvent(map, l_currency));
 						}
 					} catch(Exception e) {
