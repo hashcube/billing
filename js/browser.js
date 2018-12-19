@@ -66,7 +66,8 @@ var Billing = Class(Emitter, function (supr) {
   this.requestLocalizedPrices = function (products, cb) {
     var res = {}, id;
 
-    if (!fbinstant.payments_ready) {
+    if (!FBInstant.getSupportedAPIs()
+        .includes('payments.purchaseAsync')) {
       cb(res);
       return;
     }
