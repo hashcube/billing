@@ -67,7 +67,11 @@ var Billing = Class(Emitter, function (supr) {
     var res = {}, id;
 
     if (!fbinstant.payments_ready) {
-      cb(res);
+      fbinstant.setPaymentsReady({
+        fn: this.requestLocalizedPrices,
+        products: products,
+        next: cb
+      })
       return;
     }
 
